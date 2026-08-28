@@ -49,5 +49,9 @@ Thumbs.db
 gcloud-service-account*.json
 service-account*.json
 
+# Importador de catálogo (Módulo 02) — reportes regenerables, no versionar
+backend/scripts/import-rechazadas.json
+backend/scripts/import-advertencias.json
+
 # Misc
 *.local

@@ -67,6 +67,11 @@ model Product {
   categoriaId String
   categoria   Category @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
 
+  /// Texto plano sin acentos (nombre + marca + categoría) mantenido por quien
+  /// escribe el producto (importador por ahora). Evita depender de una
+  /// extensión de PostgreSQL (unaccent) para que "sarten" encuentre "sartén".
+  busqueda String @default("")
+
   /// Campos B2B latentes (módulo 11 los activa). Precio mayorista y compra
   /// mínima a nivel de producto; sin uso hasta el portal mayorista, pero
   /// deben existir desde ya para no migrar después.
@@ -94,6 +99,7 @@ model Product {
 
   @@unique([externalSource, externalId])
   @@index([categoriaId])
+  @@index([busqueda])
   @@map("products")
 }
 

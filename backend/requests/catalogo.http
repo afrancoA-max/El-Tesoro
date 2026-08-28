@@ -1,0 +1,69 @@
+### Colección de requests — API de catálogo (Módulo 02)
+### Compatible con la extensión "REST Client" de VS Code y con Bruno/Postman
+### (importar como texto/raw request collection).
+###
+### Cambiar @baseUrl a http://localhost:8080 para probar en local.
+
+@baseUrl = https://eltesoro-backend-staging-472679541597.us-central1.run.app
+
+### Health check
+GET {{baseUrl}}/api/health
+
+### Árbol completo de categorías
+GET {{baseUrl}}/api/categories
+
+### Productos de una categoría (paginado, orden por defecto = novedad)
+GET {{baseUrl}}/api/categories/aluminio/products
+
+### Productos con paginación explícita
+GET {{baseUrl}}/api/categories/aluminio/products?page=1&limit=5
+
+### Filtro por rango de precio
+GET {{baseUrl}}/api/categories/aluminio/products?precioMin=200&precioMax=800
+
+### Filtro por marca
+GET {{baseUrl}}/api/categories/aluminio/products?marca=UCCLIFE
+
+### Filtro por disponibilidad (todo el catálogo importado tiene existencia 0
+### por ahora — ver docs/plan/02-api-catalogo.md sección de decisiones — así
+### que esto debe devolver una lista vacía hasta tener stock real)
+GET {{baseUrl}}/api/categories/aluminio/products?disponible=true
+
+### Orden por precio ascendente
+GET {{baseUrl}}/api/categories/aluminio/products?sort=precio_asc
+
+### Orden por precio descendente
+GET {{baseUrl}}/api/categories/aluminio/products?sort=precio_desc
+
+### Orden por novedad (default)
+GET {{baseUrl}}/api/categories/aluminio/products?sort=novedad
+
+### Categoría que no existe → 404 JSON estándar
+GET {{baseUrl}}/api/categories/no-existe/products
+
+### Parámetro inválido → 400 JSON estándar
+GET {{baseUrl}}/api/categories/aluminio/products?limit=abc
+
+### Detalle de producto (reemplazar slug por uno real de /api/categories/.../products)
+GET {{baseUrl}}/api/products/sarten-antiadherente-chef
+
+### Producto que no existe → 404 JSON estándar
+GET {{baseUrl}}/api/products/no-existe
+
+### Búsqueda de texto — con tilde
+GET {{baseUrl}}/api/search?q=sartén
+
+### Búsqueda de texto — sin tilde (debe encontrar los mismos resultados)
+GET {{baseUrl}}/api/search?q=sarten
+
+### Búsqueda demasiado corta → 400 JSON estándar
+GET {{baseUrl}}/api/search?q=a
+
+### Colecciones destacadas
+GET {{baseUrl}}/api/collections
+
+### Productos de una colección (reemplazar slug por una colección real)
+GET {{baseUrl}}/api/collections/novedades/products
+
+### Ruta que no existe → 404 JSON estándar
+GET {{baseUrl}}/api/no-existe

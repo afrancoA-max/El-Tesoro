@@ -1,0 +1,91 @@
+name: Deploy backend a staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "shared/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-staging.yml"
+  workflow_dispatch: {}
+
+env:
+  PROJECT_ID: project-26c70338-0265-4c7e-837
+  REGION: us-central1
+  SERVICE: eltesoro-backend-staging
+  REPOSITORY: eltesoro-backend
+  SQL_CONNECTION_NAME: project-26c70338-0265-4c7e-837:us-central1:proyectoalmaceneltesoro
+  WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+  DEPLOYER_SA: "eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Iniciar Cloud SQL Auth Proxy
+        run: |
+          curl -sL -o /usr/local/bin/cloud-sql-proxy \
+            https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.2/cloud-sql-proxy.linux.amd64
+          chmod +x /usr/local/bin/cloud-sql-proxy
+          mkdir -p /cloudsql
+          cloud-sql-proxy --unix-socket=/cloudsql "${{ env.SQL_CONNECTION_NAME }}" &
+          sleep 5
+
+      - name: Aplicar migraciones de Prisma contra staging
+        env:
+          DATABASE_URL_SECRET: eltesoro-staging-database-url
+        run: |
+          DATABASE_URL="$(gcloud secrets versions access latest --secret=$DATABASE_URL_SECRET --project=${{ env.PROJECT_ID }})"
+          export DATABASE_URL
+          npx prisma migrate deploy --schema=backend/prisma/schema.prisma
+
+      - name: Configurar Docker para Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build y push de la imagen
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/api:${{ github.sha }}"
+          docker build -f backend/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Desplegar a Cloud Run (staging)
+        run: |
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image="$IMAGE" \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --add-cloudsql-instances=${{ env.SQL_CONNECTION_NAME }} \
+            --set-secrets=DATABASE_URL=eltesoro-staging-database-url:latest \
+            --set-env-vars="NODE_ENV=production,CORS_ORIGINS=*" \
+            --min-instances=0 --max-instances=3 --memory=512Mi \
+            --service-account="${{ env.DEPLOYER_SA }}"
+
+      - name: URL del servicio
+        run: gcloud run services describe ${{ env.SERVICE }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --format="value(status.url)"

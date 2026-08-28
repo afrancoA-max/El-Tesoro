@@ -1,6 +1,21 @@
-// Módulo 01: sin endpoints de negocio todavía (eso es alcance del módulo 02).
-// Este archivo solo confirma que el paquete backend compila y que el
-// PrismaClient generado a partir de prisma/schema.prisma es utilizable.
-import { PrismaClient } from "@prisma/client";
+import { createApp } from "./app";
+import { env } from "./config/env";
+import { logger } from "./config/logger";
+import { prisma } from "./config/prisma";
 
-export const prisma = new PrismaClient();
+const app = createApp();
+
+const server = app.listen(env.port, () => {
+  logger.info(`API de catálogo escuchando en el puerto ${env.port} (${env.nodeEnv})`);
+});
+
+async function shutdown(signal: string) {
+  logger.info(`Recibido ${signal}, cerrando servidor...`);
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
