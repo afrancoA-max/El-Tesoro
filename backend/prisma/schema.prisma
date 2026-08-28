@@ -1,0 +1,245 @@
+// Modelo de catálogo — Módulo 01 (fundacional).
+// Fuente de verdad: docs/plan/01-fundacional.md + skill retail-catalog-data-model.
+// No agrega endpoints ni lógica de negocio: solo estructura y migraciones.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  activo
+  borrador
+  descontinuado
+}
+
+enum CollectionType {
+  manual
+  automatica
+}
+
+enum ProductRelationType {
+  relacionado
+  complementario
+  parte_de_set
+}
+
+/// Categoría de catálogo. Auto-referenciada (parentId) para soportar
+/// jerarquía de profundidad arbitraria — la taxonomía real (departamento >
+/// categoría > subcategoría) todavía no está aprobada por el negocio, así
+/// que el esquema no la limita a un número fijo de niveles.
+model Category {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  nombre      String
+  descripcion String?
+  imagenUrl   String?
+  orden       Int      @default(0)
+
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryHierarchy")
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+/// Producto general (concepto). Las variantes vendibles viven en ProductVariant.
+model Product {
+  id                String        @id @default(uuid())
+  slug              String        @unique
+  nombre            String
+  descripcionCorta  String?
+  descripcionLarga  String?
+  marca             String?
+  especificaciones  Json?
+  estado            ProductStatus @default(borrador)
+
+  categoriaId String
+  categoria   Category @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+
+  /// Campos B2B latentes (módulo 11 los activa). Precio mayorista y compra
+  /// mínima a nivel de producto; sin uso hasta el portal mayorista, pero
+  /// deben existir desde ya para no migrar después.
+  precioMayorista          Decimal? @db.Decimal(10, 2)
+  cantidadMinimaMayorista  Int?
+
+  /// Metadatos de procedencia: el catálogo se poblará desde un API externo
+  /// de productos (aún no provisto). Estos campos permiten mapear cada
+  /// producto a su origen y detectar cambios sin definir todavía el
+  /// mecanismo de sincronización (eso es alcance del módulo 02).
+  externalId     String?
+  externalSource String?
+  rawPayload     Json?
+  syncedAt       DateTime?
+
+  variants  ProductVariant[]
+  images    ProductImage[]
+  collections ProductCollection[]
+
+  relatedFrom ProductRelation[] @relation("ProductRelationSource")
+  relatedTo   ProductRelation[] @relation("ProductRelationTarget")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([externalSource, externalId])
+  @@index([categoriaId])
+  @@map("products")
+}
+
+/// Variante vendible: SKU, precio y stock propios.
+model ProductVariant {
+  id     String  @id @default(uuid())
+  sku    String  @unique
+  activo Boolean @default(true)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  precio            Decimal  @db.Decimal(10, 2)
+  precioComparativo Decimal? @db.Decimal(10, 2)
+
+  pesoKg      Decimal? @db.Decimal(10, 3)
+  dimensiones Json?
+
+  imagenPrincipalId String?       @unique
+  imagenPrincipal   ProductImage? @relation("VariantMainImage", fields: [imagenPrincipalId], references: [id], onDelete: SetNull)
+
+  externalId String?
+
+  atributos VariantAttributeValue[]
+  images    ProductImage[]          @relation("VariantImages")
+  inventory Inventory?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+/// Imagen de producto o de una variante específica (ej. por color).
+/// `url` es solo la referencia al archivo en Cloud Storage (GCS) — la base
+/// de datos nunca almacena los bytes de la imagen, solo esta cadena.
+model ProductImage {
+  id               String  @id @default(uuid())
+  url              String
+  orden            Int     @default(0)
+  textoAlternativo String?
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  variantId String?
+  variant   ProductVariant? @relation("VariantImages", fields: [variantId], references: [id], onDelete: Cascade)
+
+  mainForVariant ProductVariant? @relation("VariantMainImage")
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([variantId])
+  @@map("product_images")
+}
+
+/// Tipo de atributo que genera variante (Tamaño, Color, Material...).
+model AttributeType {
+  id     String @id @default(uuid())
+  nombre String @unique
+
+  values AttributeValue[]
+
+  @@map("attribute_types")
+}
+
+model AttributeValue {
+  id     String @id @default(uuid())
+  valor  String
+
+  attributeTypeId String
+  attributeType   AttributeType @relation(fields: [attributeTypeId], references: [id], onDelete: Cascade)
+
+  variants VariantAttributeValue[]
+
+  @@unique([attributeTypeId, valor])
+  @@map("attribute_values")
+}
+
+model VariantAttributeValue {
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  attributeValueId String
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, attributeValueId])
+  @@map("variant_attribute_values")
+}
+
+/// Agrupaciones que no son la jerarquía de categorías (Novedades, Sets...).
+model Collection {
+  id     String         @id @default(uuid())
+  slug   String         @unique
+  nombre String
+  tipo   CollectionType @default(manual)
+
+  products ProductCollection[]
+
+  createdAt DateTime @default(now())
+
+  @@map("collections")
+}
+
+model ProductCollection {
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([productId, collectionId])
+  @@map("product_collections")
+}
+
+/// "También te puede interesar" / "Compra junto a esto" / sets.
+model ProductRelation {
+  productId String
+  product   Product @relation("ProductRelationSource", fields: [productId], references: [id], onDelete: Cascade)
+
+  relatedProductId String
+  relatedProduct   Product @relation("ProductRelationTarget", fields: [relatedProductId], references: [id], onDelete: Cascade)
+
+  tipo ProductRelationType
+
+  @@id([productId, relatedProductId, tipo])
+  @@map("product_relations")
+}
+
+/// Stock por variante. cantidadDisponible y cantidadReservada se manejan
+/// por separado a propósito (ver skill catalog-data-model, sección 6): la
+/// lógica de reserva/liberación es del módulo de checkout, este modelo solo
+/// la soporta. bodegaId queda listo para multi-bodega futura.
+model Inventory {
+  variantId String         @id
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  cantidadDisponible Int @default(0)
+  cantidadReservada  Int @default(0)
+  umbralStockBajo    Int @default(0)
+
+  bodegaId String?
+
+  updatedAt DateTime @updatedAt
+
+  @@map("inventory")
+}

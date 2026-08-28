@@ -1,0 +1,72 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.input {
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.input:hover:not(:disabled) {
+  border-color: var(--color-navy);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--color-navy);
+  box-shadow: 0 0 0 3px rgba(22, 48, 90, 0.15);
+}
+
+.input:disabled {
+  background: var(--color-bg-alt);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.error {
+  border-color: var(--color-danger);
+}
+
+.error:focus-visible {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.15);
+}
+
+.helpText {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.errorText {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+
+/* Clases utilitarias SOLO para /dev/design: ver Button.module.css */
+.forceHover {
+  border-color: var(--color-navy);
+}
+
+.forceFocus {
+  border-color: var(--color-navy);
+  box-shadow: 0 0 0 3px rgba(22, 48, 90, 0.15);
+}

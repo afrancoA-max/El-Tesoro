@@ -1,0 +1,213 @@
+.page {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.intro p {
+  color: var(--color-text-secondary);
+  max-width: 60ch;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-xl);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+}
+
+.sectionNote {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Colores */
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.swatch {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.swatchColor {
+  height: 64px;
+}
+
+.swatchLabel {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+}
+
+.swatchName {
+  font-weight: 600;
+}
+
+.swatchValue {
+  color: var(--color-text-secondary);
+  font-family: monospace;
+}
+
+/* Tipografía */
+.typeRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: var(--space-3);
+}
+
+.typeLabel {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: monospace;
+}
+
+/* Espaciado */
+.spaceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.spaceLabel {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+
+.spaceBar {
+  height: 16px;
+  background: var(--color-gold);
+  border-radius: var(--radius-sm);
+}
+
+/* Radios y sombras */
+.tokenGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.radiusBox {
+  height: 72px;
+  background: var(--color-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-on-navy);
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+}
+
+.shadowBox {
+  height: 72px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+
+/* Componentes: matriz de estados */
+.stateMatrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.stateCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+}
+
+.stateCellLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+.variantGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.variantGroupTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.cardDemo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cardDemoTitle {
+  font-weight: 700;
+}
+
+.cardDemoText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+@media (min-width: 768px) {
+  .swatchGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .tokenGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .stateMatrix {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,18 @@
+# Base de datos local para desarrollo (Módulo 01). El aprovisionamiento en
+# GCP (Cloud SQL) es responsabilidad de retail-gcp-deployment-devops y se
+# hace en el módulo 02, no aquí.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eltesoro
+      POSTGRES_PASSWORD: eltesoro
+      POSTGRES_DB: eltesoro_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - eltesoro-db-data:/var/lib/postgresql/data
+
+volumes:
+  eltesoro-db-data:

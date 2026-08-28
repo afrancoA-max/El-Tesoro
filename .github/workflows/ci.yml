@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    env:
+      # Solo para que `prisma generate`/`validate` puedan resolver el
+      # datasource en CI. No se conecta a ninguna base de datos real: este
+      # job no corre migraciones (eso pertenece al pipeline de despliegue
+      # del módulo 09).
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validar esquema de Prisma
+        run: npx prisma validate --schema=backend/prisma/schema.prisma
+
+      - name: Build
+        run: npm run build

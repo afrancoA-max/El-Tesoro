@@ -1,0 +1,85 @@
+/*
+ * Design tokens — Módulo 01 (fundacional).
+ * Fuente única de verdad de color, tipografía, espaciado, radios y sombras.
+ * Ningún componente debe usar valores "sueltos": siempre referenciar estas
+ * variables. Paleta derivada del logo existente de Almacén El Tesoro
+ * (azul marino + dorado), con un rojo de acento secundario poco intenso
+ * (confirmado por el negocio).
+ */
+:root {
+  /* Color — neutros cálidos, el producto es el protagonista visual */
+  --color-bg: #faf8f5;
+  --color-bg-alt: #f0ebe3;
+  --color-surface: #ffffff;
+  --color-text-primary: #1c2431;
+  --color-text-secondary: #5b6472;
+  --color-text-on-navy: #f5f1e6;
+
+  /* Color — marca, tomada del logo "Almacén El Tesoro" */
+  --color-navy: #16305a;
+  --color-navy-hover: #0f2242;
+  --color-navy-surface: #0f2242;
+
+  --color-gold: #e3a723;
+  --color-gold-hover: #c88f16;
+  --color-on-gold: #2a1c05;
+
+  --color-red: #b3453a;
+  --color-red-hover: #963a30;
+
+  /* Color — estado */
+  --color-success: #4c7a4c;
+  --color-success-bg: #eaf3ea;
+  --color-danger: #b3261e;
+  --color-danger-bg: #fbeceb;
+  /* Texto sobre fondos sólidos saturados (danger, success, red) */
+  --color-on-solid: #ffffff;
+  --color-focus-ring: #2f6fed;
+
+  --color-border: #e4ded5;
+  --color-border-strong: #cabfae;
+
+  /* Tipografía */
+  --font-heading: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2.5rem;
+
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+
+  /* Espaciado — escala de 4px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Bordes y sombras */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  --shadow-card: 0 2px 8px rgba(22, 48, 90, 0.08);
+  --shadow-card-hover: 0 8px 24px rgba(22, 48, 90, 0.14);
+  --shadow-modal: 0 16px 48px rgba(22, 48, 90, 0.24);
+
+  /* Transiciones — motion moderado, ver skill ux-design-system sección 6 */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+
+  /* Breakpoints (referencia; usar directamente en media queries) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}

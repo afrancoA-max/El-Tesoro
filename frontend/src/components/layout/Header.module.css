@@ -1,0 +1,70 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--color-navy);
+  color: var(--color-text-on-navy);
+  box-shadow: var(--shadow-card);
+}
+
+.bar {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo {
+  height: 48px;
+  width: auto;
+  border-radius: var(--radius-sm);
+}
+
+.megaMenuSlot {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.iconButton {
+  background: transparent;
+  border: none;
+  color: var(--color-text-on-navy);
+  font-size: var(--font-size-lg);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.iconButton:hover {
+  background: rgba(245, 241, 230, 0.12);
+}
+
+.menuButton {
+  display: inline-flex;
+}
+
+@media (min-width: 768px) {
+  .megaMenuSlot {
+    display: block;
+  }
+
+  .menuButton {
+    display: none;
+  }
+}

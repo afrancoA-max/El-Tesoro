@@ -1,0 +1,91 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  padding: var(--space-3) var(--space-6);
+  min-height: 44px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Variant: primary (acento dorado — CTA principal) */
+.primary {
+  background: var(--color-gold);
+  color: var(--color-on-gold);
+}
+.primary:hover:not(:disabled) {
+  background: var(--color-gold-hover);
+}
+.primary:active:not(:disabled) {
+  background: var(--color-gold-hover);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Variant: secondary (marca — navegación, acciones secundarias) */
+.secondary {
+  background: var(--color-navy);
+  color: var(--color-text-on-navy);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--color-navy-hover);
+}
+
+/* Variant: outline */
+.outline {
+  background: transparent;
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+.outline:hover:not(:disabled) {
+  border-color: var(--color-navy);
+  background: var(--color-bg-alt);
+}
+
+/* Variant: danger */
+.danger {
+  background: var(--color-danger);
+  color: var(--color-on-solid);
+}
+.danger:hover:not(:disabled) {
+  background: var(--color-red-hover);
+}
+
+.sm {
+  min-height: 36px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+/* Clases utilitarias SOLO para /dev/design: fuerzan visualmente un estado
+   que normalmente depende de interacción (:hover, :focus-visible), para
+   poder mostrarlo en una captura estática junto a los demás estados. */
+.forceHover.primary {
+  background: var(--color-gold-hover);
+}
+.forceHover.secondary {
+  background: var(--color-navy-hover);
+}
+.forceHover.outline {
+  border-color: var(--color-navy);
+  background: var(--color-bg-alt);
+}
+.forceHover.danger {
+  background: var(--color-red-hover);
+}
+
+.forceFocus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

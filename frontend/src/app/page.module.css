@@ -1,0 +1,26 @@
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-4);
+  padding: var(--space-16) var(--space-4);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+}
+
+.link {
+  color: var(--color-navy);
+  font-weight: 600;
+  text-decoration: underline;
+}
