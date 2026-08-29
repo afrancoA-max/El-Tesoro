@@ -39,6 +39,42 @@ export const CATEGORY_FALLBACK_MAP: Record<string, string> = {
   TRASTESITOS: "china",
   VAJILLAS: "aluminio",
   VASOS: "cristaleria",
+
+  // Agregado tras la primera importación real (2026-08-29, ~1270 filas): estas
+  // 30 categorías del Excel no tenían mapeo y cayeron en "varios". El dueño
+  // pidió que se mapearan a un material razonable — ver conversación del
+  // Módulo 03. Son mejor esfuerzo, no verdad de negocio: fácil de corregir
+  // cambiando el valor aquí y re-importando (no requiere tocar el Excel).
+  OLLAS: "aluminio",
+  "OLLA BAJA": "aluminio",
+  "BATERIAS DE COCINA": "aluminio",
+  COMAL: "aluminio",
+  PAVERAS: "aluminio",
+  MOLDES: "reposteria",
+  FLANERA: "reposteria",
+  TINA: "lavado",
+  PALANGANAS: "lavado",
+  ARROCERA: "electrodomesticos",
+  LICUADORA: "electrodomesticos",
+  TELEVISOR: "electrodomesticos",
+  MICROONDAS: "electrodomesticos",
+  CAFETERA: "electrodomesticos",
+  PROCESADOR: "electrodomesticos",
+  PLATOS: "china",
+  "TAZA BOLA": "china",
+  COLADOR: "coladores",
+  HIELERAS: "hieleras",
+  COPAS: "cristaleria",
+  TEQUILEROS: "cristaleria",
+  FLOREROS: "cristaleria",
+  JARRA: "cristaleria",
+  VOTIVO: "cristaleria",
+  CUCHARONES: "cubiertos",
+  CUCHARA: "cubiertos",
+  ESPATULAS: "cubiertos",
+  CUBETA: "plastico",
+  HERVIDORES: "acero-inoxidable",
+  LECHERO: "acero-inoxidable",
 };
 
 export const DEFAULT_CATEGORY_SLUG = "varios";
