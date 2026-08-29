@@ -55,15 +55,17 @@ jobs:
       - name: Configurar Docker para Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      - name: Build y push de la imagen
+      - name: Build de la imagen
         run: |
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/web:${{ github.sha }}"
           docker build -f frontend/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL="${{ env.API_URL }}" \
             --build-arg NEXT_PUBLIC_SITE_URL="${{ env.SITE_URL }}" \
             -t "$IMAGE" .
-          docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Push de la imagen
+        run: docker push "$IMAGE"
 
       - name: Desplegar a Cloud Run (staging)
         run: |
