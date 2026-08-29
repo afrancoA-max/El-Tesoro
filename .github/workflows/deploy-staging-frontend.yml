@@ -15,7 +15,12 @@ env:
   PROJECT_ID: project-26c70338-0265-4c7e-837
   REGION: us-central1
   SERVICE: eltesoro-frontend-staging
-  REPOSITORY: eltesoro-frontend
+  # Reutiliza el repositorio de Artifact Registry ya creado para el backend
+  # (módulo 02): el deployer SA solo tiene permiso de escritura ahí, no de
+  # crear repositorios nuevos ("PERMISSION_DENIED" al intentar crear
+  # "eltesoro-frontend" — ver corrida fallida del 2026-08-29). Un repositorio
+  # Docker puede alojar imágenes de distintos servicios sin conflicto.
+  REPOSITORY: eltesoro-backend
   API_URL: https://eltesoro-backend-staging-472679541597.us-central1.run.app/api
   SITE_URL: https://eltesoro-frontend-staging-472679541597.us-central1.run.app
   WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
