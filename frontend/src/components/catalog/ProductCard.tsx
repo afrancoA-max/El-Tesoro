@@ -40,14 +40,10 @@ export function ProductCard({ product }: ProductCardProps) {
           </span>
         )}
       </div>
+      {marca && (
+        <span className={styles.brandLine} style={{ backgroundColor: getBrandAccentColor(marca) }} aria-hidden="true" />
+      )}
       <div className={styles.body}>
-        {marca && (
-          <span
-            className={styles.brandLine}
-            style={{ backgroundColor: getBrandAccentColor(marca) }}
-            aria-hidden="true"
-          />
-        )}
         {marca && <p className={styles.brand}>{marca}</p>}
         {/* No es <h3>: el grid de tarjetas no siempre tiene un <h2> padre
             (categoría, búsqueda), y forzar uno solo para esto rompería el

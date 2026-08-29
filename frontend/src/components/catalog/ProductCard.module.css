@@ -59,10 +59,9 @@
 
 .brandLine {
   display: block;
-  width: 32px;
-  height: 3px;
-  border-radius: var(--radius-full);
-  margin-bottom: var(--space-1);
+  width: 100%;
+  height: 5px;
+  flex-shrink: 0;
 }
 
 .brand {
