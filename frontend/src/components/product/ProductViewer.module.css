@@ -1,0 +1,145 @@
+.wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+}
+
+@media (min-width: 1024px) {
+  .wrap {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.brand {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.name {
+  font-size: var(--font-size-xl);
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.price {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--color-red);
+}
+
+.priceCompare {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.description {
+  color: var(--color-text-secondary);
+}
+
+.variantGroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.variantGroup {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.variantLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  padding: 0 0 var(--space-2);
+}
+
+.variantOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.variantOption {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.variantOption:hover {
+  border-color: var(--color-navy);
+}
+
+.variantOptionActive {
+  border-color: var(--color-navy);
+  background: var(--color-navy);
+  color: var(--color-text-on-navy);
+}
+
+.ctaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  position: sticky;
+  bottom: var(--space-4);
+}
+
+.ctaNote {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.specs {
+  margin-top: var(--space-4);
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.specs th,
+.specs td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.specs th {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  width: 40%;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-2);
+}
+
+.longDescription {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+}

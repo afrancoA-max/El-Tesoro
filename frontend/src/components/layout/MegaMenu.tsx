@@ -85,7 +85,7 @@ export function MegaMenu() {
                 {activeDepartment.categorias.map((categoria) => (
                   <Link
                     key={categoria.slug}
-                    href={`/categoria/${activeDepartment.slug}/${categoria.slug}`}
+                    href={`/categoria/${categoria.slug}`}
                     className={styles.categoryLink}
                     onClick={() => setOpen(false)}
                   >

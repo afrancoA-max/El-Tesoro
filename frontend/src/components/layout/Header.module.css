@@ -40,6 +40,9 @@
 }
 
 .iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--color-text-on-navy);
@@ -53,6 +56,11 @@
 
 .iconButton:hover {
   background: rgba(245, 241, 230, 0.12);
+}
+
+.iconButton svg {
+  width: 22px;
+  height: 22px;
 }
 
 .menuButton {

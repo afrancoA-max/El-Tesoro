@@ -1,0 +1,35 @@
+.nav {
+  padding: var(--space-3) 0;
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.link {
+  color: var(--color-text-secondary);
+}
+
+.link:hover {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
+.current {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.separator {
+  color: var(--color-border-strong);
+}

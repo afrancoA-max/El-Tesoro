@@ -37,7 +37,7 @@ export function MobileNav({ onNavigate }: MobileNavProps) {
                 {department.categorias.map((categoria) => (
                   <Link
                     key={categoria.slug}
-                    href={`/categoria/${department.slug}/${categoria.slug}`}
+                    href={`/categoria/${categoria.slug}`}
                     className={styles.categoryLink}
                     onClick={onNavigate}
                   >

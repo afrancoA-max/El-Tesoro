@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
   // se ve (HTML/CSS ya vino del servidor) pero React nunca hidrata, así
   // que ningún botón responde. Si tu IP local cambia, agrégala aquí.
   allowedDevOrigins: ["192.168.0.154"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "storage.googleapis.com",
+        pathname: "/eltesoro-product-images-staging/**",
+      },
+    ],
+  },
+  output: "standalone",
 };
 
 export default nextConfig;
