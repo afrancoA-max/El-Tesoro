@@ -40,7 +40,10 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
       <div className={styles.body}>
         {"marca" in product && product.marca && <p className={styles.brand}>{product.marca}</p>}
-        <h3 className={styles.name}>{product.nombre}</h3>
+        {/* No es <h3>: el grid de tarjetas no siempre tiene un <h2> padre
+            (categoría, búsqueda), y forzar uno solo para esto rompería el
+            orden de encabezados (heading-order, Compuerta SEO #1). */}
+        <p className={styles.name}>{product.nombre}</p>
         <p className={styles.price}>Desde {formatCurrency(product.precioDesde)}</p>
       </div>
     </Link>
