@@ -10,22 +10,16 @@
   margin-bottom: var(--space-6);
 }
 
+/* Una sola fila, siempre — con scroll horizontal en vez de envolver a una
+   segunda fila. Así funciona igual con 5 categorías que con 20 más
+   adelante, sin volver a tocar el layout. */
 .grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
   gap: var(--space-4);
-}
-
-@media (min-width: 640px) {
-  .grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
 }
 
 .card {
@@ -34,6 +28,15 @@
   align-items: center;
   gap: var(--space-2);
   text-align: center;
+  flex: 0 0 auto;
+  width: 108px;
+  scroll-snap-align: start;
+}
+
+@media (min-width: 640px) {
+  .card {
+    width: 128px;
+  }
 }
 
 .imageWrap {

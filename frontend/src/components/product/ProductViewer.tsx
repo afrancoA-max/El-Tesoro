@@ -101,16 +101,23 @@ export function ProductViewer({ product }: ProductViewerProps) {
         </div>
 
         {product.especificaciones && Object.keys(product.especificaciones).length > 0 && (
-          <table className={styles.specs}>
-            <tbody>
-              {Object.entries(product.especificaciones).map(([key, value]) => (
-                <tr key={key}>
-                  <th scope="row">{key}</th>
-                  <td>{value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className={styles.specsBlock}>
+            <h2 className={styles.sectionTitle}>Características</h2>
+            {/* Tabla 100% dinámica: las filas salen de las claves que traiga
+                `especificaciones` para este producto puntual — un producto
+                puede tener 3 características y otro 10, sin lista fija en
+                el código (ver retail-catalog-data-model / Módulo 02). */}
+            <table className={styles.specs}>
+              <tbody>
+                {Object.entries(product.especificaciones).map(([key, value]) => (
+                  <tr key={key}>
+                    <th scope="row">{key}</th>
+                    <td>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {product.descripcionLarga && (

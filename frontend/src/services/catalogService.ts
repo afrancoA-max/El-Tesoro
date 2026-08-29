@@ -18,6 +18,7 @@ export function getCategoryProducts(slug: string, params: ProductQueryParams = {
     precioMin: params.precioMin,
     precioMax: params.precioMax,
     marca: params.marca,
+    material: params.material,
     disponible: params.disponible,
     sort: params.sort,
   });

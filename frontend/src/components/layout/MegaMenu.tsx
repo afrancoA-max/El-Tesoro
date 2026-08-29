@@ -3,14 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import styles from "./MegaMenu.module.css";
-import { NAV_DEPARTMENTS } from "./navigation-data";
+import { CategoryNode } from "@/lib/api-types";
 
-export function MegaMenu() {
+export interface MegaMenuProps {
+  departments: CategoryNode[];
+}
+
+export function MegaMenu({ departments }: MegaMenuProps) {
   const [open, setOpen] = useState(false);
-  const [activeSlug, setActiveSlug] = useState(NAV_DEPARTMENTS[0]?.slug);
+  const [activeSlug, setActiveSlug] = useState(departments[0]?.slug);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const activeDepartment = NAV_DEPARTMENTS.find((department) => department.slug === activeSlug);
+  const activeDepartment = departments.find((department) => department.slug === activeSlug);
 
   useEffect(() => {
     if (!open) return;
@@ -31,6 +35,8 @@ export function MegaMenu() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  if (departments.length === 0) return null;
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
@@ -53,7 +59,7 @@ export function MegaMenu() {
       {open && (
         <div className={styles.panel} role="menu" aria-label="Categorías">
           <div className={styles.departmentList}>
-            {NAV_DEPARTMENTS.map((department) => {
+            {departments.map((department) => {
               const isActive = department.slug === activeSlug;
               return (
                 <button
@@ -82,7 +88,7 @@ export function MegaMenu() {
                 Ver todo en {activeDepartment.nombre} <span aria-hidden="true">→</span>
               </Link>
               <div className={styles.categoryGrid}>
-                {activeDepartment.categorias.map((categoria) => (
+                {activeDepartment.children.map((categoria) => (
                   <Link
                     key={categoria.slug}
                     href={`/categoria/${categoria.slug}`}

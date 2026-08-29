@@ -25,6 +25,9 @@ export interface ProductListItem {
   categoria: { slug: string; nombre: string };
   precioDesde: number;
   disponible: boolean;
+  // Vacío en casi todo el catálogo actual: depende de que el Excel de
+  // origen tenga la columna "Material" (ver backend/scripts/import-catalog.ts).
+  materiales: string[];
   imagenPrincipal: string | null;
   createdAt: string;
 }
@@ -96,6 +99,7 @@ export interface ProductQueryParams {
   precioMin?: number;
   precioMax?: number;
   marca?: string;
+  material?: string;
   disponible?: boolean;
   sort?: "precio_asc" | "precio_desc" | "novedad";
 }

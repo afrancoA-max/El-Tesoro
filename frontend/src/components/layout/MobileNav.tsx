@@ -3,18 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import styles from "./MobileNav.module.css";
-import { NAV_DEPARTMENTS } from "./navigation-data";
+import { CategoryNode } from "@/lib/api-types";
 
 export interface MobileNavProps {
+  departments: CategoryNode[];
   onNavigate: () => void;
 }
 
-export function MobileNav({ onNavigate }: MobileNavProps) {
+export function MobileNav({ departments, onNavigate }: MobileNavProps) {
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
 
   return (
     <nav className={styles.nav} aria-label="Categorías (móvil)">
-      {NAV_DEPARTMENTS.map((department) => {
+      {departments.map((department) => {
         const isExpanded = expandedSlug === department.slug;
         return (
           <div key={department.slug}>
@@ -34,7 +35,7 @@ export function MobileNav({ onNavigate }: MobileNavProps) {
             </button>
             {isExpanded && (
               <div className={styles.categoryList}>
-                {department.categorias.map((categoria) => (
+                {department.children.map((categoria) => (
                   <Link
                     key={categoria.slug}
                     href={`/categoria/${categoria.slug}`}

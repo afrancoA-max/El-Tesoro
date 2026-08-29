@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductListItem, SearchResultItem } from "@/lib/api-types";
 import { formatCurrency } from "@/lib/format";
+import { getBrandAccentColor } from "@/lib/brandTheme";
 import { Badge } from "@/components/ui";
 import styles from "./ProductCard.module.css";
 
@@ -11,6 +12,7 @@ export interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const disponible = "disponible" in product ? product.disponible : true;
+  const marca = "marca" in product ? product.marca : null;
 
   return (
     <Link href={`/producto/${product.slug}`} className={styles.card}>
@@ -39,7 +41,14 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
       <div className={styles.body}>
-        {"marca" in product && product.marca && <p className={styles.brand}>{product.marca}</p>}
+        {marca && (
+          <span
+            className={styles.brandLine}
+            style={{ backgroundColor: getBrandAccentColor(marca) }}
+            aria-hidden="true"
+          />
+        )}
+        {marca && <p className={styles.brand}>{marca}</p>}
         {/* No es <h3>: el grid de tarjetas no siempre tiene un <h2> padre
             (categoría, búsqueda), y forzar uno solo para esto rompería el
             orden de encabezados (heading-order, Compuerta SEO #1). */}

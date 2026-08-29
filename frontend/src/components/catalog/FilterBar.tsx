@@ -13,13 +13,14 @@ const SORT_OPTIONS = [
 
 export interface FilterBarProps {
   marcasDisponibles: string[];
+  materialesDisponibles: string[];
   totalResultados: number;
 }
 
 // Todo filtro/orden vive en la URL (searchParams), nunca en estado que se
 // pierda al recargar — así la página es compartible y recargable con el
 // mismo resultado (criterio "Listo cuando" del Módulo 03).
-export function FilterBar({ marcasDisponibles, totalResultados }: FilterBarProps) {
+export function FilterBar({ marcasDisponibles, materialesDisponibles, totalResultados }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -28,6 +29,7 @@ export function FilterBar({ marcasDisponibles, totalResultados }: FilterBarProps
   const precioMin = searchParams.get("precioMin") ?? "";
   const precioMax = searchParams.get("precioMax") ?? "";
   const marca = searchParams.get("marca") ?? "";
+  const material = searchParams.get("material") ?? "";
   const disponible = searchParams.get("disponible") ?? "";
   const sort = searchParams.get("sort") ?? "novedad";
 
@@ -41,7 +43,7 @@ export function FilterBar({ marcasDisponibles, totalResultados }: FilterBarProps
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const hasActiveFilters = Boolean(precioMin || precioMax || marca || disponible);
+  const hasActiveFilters = Boolean(precioMin || precioMax || marca || material || disponible);
 
   return (
     <div className={styles.wrap}>
@@ -110,6 +112,24 @@ export function FilterBar({ marcasDisponibles, totalResultados }: FilterBarProps
           </label>
         )}
 
+        {materialesDisponibles.length > 0 && (
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Material</span>
+            <select
+              className={styles.select}
+              value={material}
+              onChange={(event) => updateParams({ material: event.target.value })}
+            >
+              <option value="">Todos</option>
+              {materialesDisponibles.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className={styles.checkboxField}>
           <input
             type="checkbox"
@@ -123,7 +143,9 @@ export function FilterBar({ marcasDisponibles, totalResultados }: FilterBarProps
           <Button
             variant="outline"
             size="sm"
-            onClick={() => updateParams({ precioMin: null, precioMax: null, marca: null, disponible: null })}
+            onClick={() =>
+              updateParams({ precioMin: null, precioMax: null, marca: null, material: null, disponible: null })
+            }
           >
             Quitar filtros
           </Button>

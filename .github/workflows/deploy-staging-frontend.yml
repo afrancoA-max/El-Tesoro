@@ -76,7 +76,7 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --port=8080 \
-            --min-instances=0 --max-instances=3 --memory=512Mi \
+            --min-instances=1 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 
       - name: URL del servicio

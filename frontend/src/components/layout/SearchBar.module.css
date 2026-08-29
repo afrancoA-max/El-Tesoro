@@ -99,6 +99,20 @@
   color: var(--color-text-secondary);
 }
 
+.suggestionActive {
+  background: var(--color-bg-alt);
+}
+
+.match {
+  background: transparent;
+  color: var(--color-navy);
+  font-weight: 700;
+}
+
+.seeAllActive {
+  background: var(--color-border);
+}
+
 .seeAll {
   width: 100%;
   text-align: center;

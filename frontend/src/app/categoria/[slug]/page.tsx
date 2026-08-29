@@ -50,6 +50,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const precioMin = query.precioMin ? Number(query.precioMin) : undefined;
   const precioMax = query.precioMax ? Number(query.precioMax) : undefined;
   const marca = query.marca || undefined;
+  const material = query.material || undefined;
   const disponible = query.disponible === "true" ? true : undefined;
 
   let path;
@@ -64,14 +65,16 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   let result;
   let facetsBrands: string[] = [];
+  let facetsMateriales: string[] = [];
   try {
     [result] = await Promise.all([
-      getCategoryProducts(slug, { page, sort, precioMin, precioMax, marca, disponible }),
+      getCategoryProducts(slug, { page, sort, precioMin, precioMax, marca, material, disponible }),
     ]);
     const facetSource = await getCategoryProducts(slug, { limit: 100 });
     facetsBrands = Array.from(
       new Set(facetSource.items.map((item) => item.marca).filter((m): m is string => Boolean(m))),
     ).sort();
+    facetsMateriales = Array.from(new Set(facetSource.items.flatMap((item) => item.materiales ?? []))).sort();
   } catch (error) {
     const message = error instanceof ApiError ? error.message : undefined;
     return <ErrorState title="No pudimos cargar los productos" description={message} />;
@@ -103,7 +106,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       <h1 className={styles.title}>{current.nombre}</h1>
       {current.descripcion && <p className={styles.description}>{current.descripcion}</p>}
 
-      <FilterBar marcasDisponibles={facetsBrands} totalResultados={result.total} />
+      <FilterBar marcasDisponibles={facetsBrands} materialesDisponibles={facetsMateriales} totalResultados={result.total} />
       <ProductGrid products={result.items} />
       <Pagination page={result.page} totalPages={result.totalPages} />
     </main>

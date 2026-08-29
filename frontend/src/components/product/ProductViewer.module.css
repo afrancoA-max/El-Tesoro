@@ -114,8 +114,11 @@
   color: var(--color-text-secondary);
 }
 
-.specs {
+.specsBlock {
   margin-top: var(--space-4);
+}
+
+.specs {
   border-collapse: collapse;
   width: 100%;
 }

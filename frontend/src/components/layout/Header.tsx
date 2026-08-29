@@ -7,8 +7,13 @@ import styles from "./Header.module.css";
 import { MegaMenu } from "./MegaMenu";
 import { MobileNav } from "./MobileNav";
 import { SearchBar } from "./SearchBar";
+import { CategoryNode } from "@/lib/api-types";
 
-export function Header() {
+export interface HeaderProps {
+  categoryTree: CategoryNode[];
+}
+
+export function Header({ categoryTree }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -26,7 +31,7 @@ export function Header() {
         </Link>
 
         <div className={styles.megaMenuSlot}>
-          <MegaMenu />
+          <MegaMenu departments={categoryTree} />
         </div>
 
         <SearchBar />
@@ -56,7 +61,7 @@ export function Header() {
         </div>
       </div>
 
-      {mobileOpen && <MobileNav onNavigate={() => setMobileOpen(false)} />}
+      {mobileOpen && <MobileNav departments={categoryTree} onNavigate={() => setMobileOpen(false)} />}
     </header>
   );
 }

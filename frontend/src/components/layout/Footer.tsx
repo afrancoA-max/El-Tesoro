@@ -1,8 +1,12 @@
 import Image from "next/image";
-import { NAV_DEPARTMENTS } from "./navigation-data";
+import { CategoryNode } from "@/lib/api-types";
 import styles from "./Footer.module.css";
 
-export function Footer() {
+export interface FooterProps {
+  categoryTree: CategoryNode[];
+}
+
+export function Footer({ categoryTree }: FooterProps) {
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
@@ -23,7 +27,7 @@ export function Footer() {
         <div className={styles.columns}>
           <div>
             <p className={styles.columnTitle}>Categorías</p>
-            {NAV_DEPARTMENTS.map((department) => (
+            {categoryTree.map((department) => (
               <a key={department.slug} className={styles.link} href={`/categoria/${department.slug}`}>
                 {department.nombre}
               </a>
