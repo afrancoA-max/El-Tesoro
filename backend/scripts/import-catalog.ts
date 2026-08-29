@@ -31,6 +31,11 @@ interface RawRow {
   Categoría: unknown;
   Marca: unknown;
   "Fotografía (URL)": unknown;
+  // Opcional: el archivo real hoy no trae esta columna (ver docs/plan/03,
+  // riesgo "filtro de material"). Si el negocio la agrega más adelante, se
+  // recoge automáticamente sin más cambios de código — ver
+  // ensureMaterialAttribute más abajo.
+  Material?: unknown;
 }
 
 interface RejectedRow {
@@ -88,6 +93,29 @@ async function ensureUniqueSlug(base: string, externalId: string): Promise<strin
   return candidate;
 }
 
+// Idempotente: si el material cambia en una re-importación, reemplaza el
+// vínculo anterior en vez de acumular valores viejos sobre la misma variante.
+async function ensureMaterialAttribute(variantId: string, materialRaw: string): Promise<void> {
+  const attributeType = await prisma.attributeType.upsert({
+    where: { nombre: "Material" },
+    update: {},
+    create: { nombre: "Material" },
+  });
+
+  const attributeValue = await prisma.attributeValue.upsert({
+    where: { attributeTypeId_valor: { attributeTypeId: attributeType.id, valor: materialRaw } },
+    update: {},
+    create: { attributeTypeId: attributeType.id, valor: materialRaw },
+  });
+
+  await prisma.variantAttributeValue.deleteMany({
+    where: { variantId, attributeValue: { attributeTypeId: attributeType.id } },
+  });
+  await prisma.variantAttributeValue.create({
+    data: { variantId, attributeValueId: attributeValue.id },
+  });
+}
+
 function guessExtension(url: string): string {
   const match = /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.exec(url);
   return match ? match[1].toLowerCase() : "jpg";
@@ -140,6 +168,7 @@ async function main() {
     const categoriaRaw = String(row["Categoría"] ?? "").trim();
     const marca = row["Marca"] ? String(row["Marca"]).trim() : null;
     const fotoUrl = row["Fotografía (URL)"] ? String(row["Fotografía (URL)"]).trim() : null;
+    const material = row["Material"] ? String(row["Material"]).trim() : null;
 
     if (!descripcion) {
       rechazadas.push({ fila, codigo, descripcion, motivo: "Descripción vacía" });
@@ -218,6 +247,10 @@ async function main() {
       update: { precio: precioRaw, externalId },
       create: { sku, productId: product.id, precio: precioRaw, externalId, activo: true },
     });
+
+    if (material) {
+      await ensureMaterialAttribute(variant.id, material);
+    }
 
     await prisma.inventory.upsert({
       where: { variantId: variant.id },

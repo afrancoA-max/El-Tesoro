@@ -14,6 +14,7 @@ export async function listProductsByCategoryController(req: Request, res: Respon
         precioMin: query.precioMin,
         precioMax: query.precioMax,
         marca: query.marca,
+        material: query.material,
         disponible: query.disponible,
         sort: query.sort,
       },

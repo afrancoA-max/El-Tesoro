@@ -6,6 +6,7 @@ export const productListQuerySchema = z.object({
   precioMin: z.coerce.number().nonnegative().optional(),
   precioMax: z.coerce.number().nonnegative().optional(),
   marca: z.string().min(1).optional(),
+  material: z.string().min(1).optional(),
   disponible: z
     .enum(["true", "false"])
     .optional()

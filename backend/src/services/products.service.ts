@@ -10,6 +10,7 @@ export interface ProductListFilters {
   precioMin?: number;
   precioMax?: number;
   marca?: string;
+  material?: string;
   disponible?: boolean;
   sort: ProductSort;
 }
@@ -30,6 +31,15 @@ function toSummary(product: ProductWithVariants) {
   const precios = product.variants.map((v) => Number(v.precio));
   const precioDesde = precios.length > 0 ? Math.min(...precios) : null;
   const disponible = product.variants.some((v) => (v.inventory?.cantidadDisponible ?? 0) > 0);
+  const materiales = Array.from(
+    new Set(
+      product.variants.flatMap((v) =>
+        v.atributos
+          .filter((a) => a.attributeValue.attributeType.nombre === "Material")
+          .map((a) => a.attributeValue.valor),
+      ),
+    ),
+  );
 
   return {
     id: product.id,
@@ -40,6 +50,11 @@ function toSummary(product: ProductWithVariants) {
     categoria: { slug: product.categoria.slug, nombre: product.categoria.nombre },
     precioDesde,
     disponible,
+    // Vacío hoy para casi todo el catálogo: el importador de Excel (Módulo
+    // 02) recién empezó a leer una columna "Material" opcional — ver
+    // import-catalog.ts. El campo existe para que el filtro de material del
+    // frontend funcione en cuanto haya datos, sin otro cambio de API.
+    materiales,
     imagenPrincipal: product.images[0]?.url ?? product.variants[0]?.images?.[0]?.url ?? null,
     createdAt: product.createdAt,
   };
@@ -52,23 +67,50 @@ export async function listProductsByCategory(
 ): Promise<PaginatedResult<ReturnType<typeof toSummary>>> {
   const { categoryId, descendantIds } = await getCategoryWithDescendantIds(categorySlug);
 
+  // Cada condición sobre `variants` va en su propia entrada de `AND`: usar
+  // varias claves `variants` en el mismo objeto se pisarían entre sí (el
+  // filtro de precio y el de material son condiciones independientes, no
+  // deben exigirse ambas sobre la MISMA variante necesariamente, pero sí
+  // deben combinarse — objeto spread con la misma key solo deja la última).
+  const variantConditions: Prisma.ProductWhereInput[] = [];
+
+  if (filters.material) {
+    variantConditions.push({
+      variants: {
+        some: {
+          activo: true,
+          atributos: {
+            some: {
+              attributeValue: {
+                valor: { equals: filters.material, mode: "insensitive" },
+                attributeType: { nombre: "Material" },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  if (filters.precioMin !== undefined || filters.precioMax !== undefined) {
+    variantConditions.push({
+      variants: {
+        some: {
+          activo: true,
+          precio: {
+            ...(filters.precioMin !== undefined ? { gte: filters.precioMin } : {}),
+            ...(filters.precioMax !== undefined ? { lte: filters.precioMax } : {}),
+          },
+        },
+      },
+    });
+  }
+
   const where: Prisma.ProductWhereInput = {
     estado: "activo",
     categoriaId: { in: [categoryId, ...descendantIds] },
     ...(filters.marca ? { marca: { equals: filters.marca, mode: "insensitive" } } : {}),
-    ...(filters.precioMin !== undefined || filters.precioMax !== undefined
-      ? {
-          variants: {
-            some: {
-              activo: true,
-              precio: {
-                ...(filters.precioMin !== undefined ? { gte: filters.precioMin } : {}),
-                ...(filters.precioMax !== undefined ? { lte: filters.precioMax } : {}),
-              },
-            },
-          },
-        }
-      : {}),
+    ...(variantConditions.length > 0 ? { AND: variantConditions } : {}),
   };
 
   // El catálogo de este módulo es pequeño (importador filtra a productos con
