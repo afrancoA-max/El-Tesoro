@@ -8,6 +8,11 @@
 // dato real), sube las fotos a Cloud Storage, y crea/actualiza productos de
 // forma re-ejecutable (upsert por externalSource+externalId, nunca duplica).
 //
+// Varias fotos por producto: agregar columnas "Fotografía 2 (URL)",
+// "Fotografía 3 (URL)", etc. junto a la columna original "Fotografía (URL)"
+// — no todas las filas necesitan la misma cantidad, las columnas vacías se
+// ignoran. El orden de las columnas define el orden en la galería.
+//
 // Uso:
 //   npm run import:catalogo -- --file="../productos_almacen_el_tesoro_completo.xlsx"
 //   npm run import:catalogo -- --file=/ruta/al/excel.xlsx --bucket=mi-bucket --skip-images
@@ -31,11 +36,32 @@ interface RawRow {
   Categoría: unknown;
   Marca: unknown;
   "Fotografía (URL)": unknown;
+  // Fotos adicionales: "Fotografía 2 (URL)", "Fotografía 3 (URL)", etc. — ver
+  // collectPhotoUrls. No están tipadas aquí porque la cantidad de columnas es
+  // variable (el Excel puede traer 1 o varias, no hay un máximo fijo).
   // Opcional: el archivo real hoy no trae esta columna (ver docs/plan/03,
   // riesgo "filtro de material"). Si el negocio la agrega más adelante, se
   // recoge automáticamente sin más cambios de código — ver
   // ensureMaterialAttribute más abajo.
   Material?: unknown;
+}
+
+// Junta "Fotografía (URL)", "Fotografía 2 (URL)", "Fotografía 3 (URL)"... en
+// una lista ordenada — el negocio puede agregar tantas columnas como
+// necesite (no todas las filas necesitan la misma cantidad de fotos), sin
+// tocar este código. El orden de las columnas define el orden de la
+// galería; la primera sigue siendo la foto de portada.
+function collectPhotoUrls(row: Record<string, unknown>): string[] {
+  const entries: Array<[number, string]> = [];
+  for (const [key, value] of Object.entries(row)) {
+    const match = /^Fotograf[ií]a\s*(\d*)\s*\(URL\)$/i.exec(key.trim());
+    if (!match) continue;
+    const url = value ? String(value).trim() : "";
+    if (!url) continue;
+    const index = match[1] ? Number(match[1]) : 1;
+    entries.push([index, url]);
+  }
+  return entries.sort((a, b) => a[0] - b[0]).map(([, url]) => url);
 }
 
 interface RejectedRow {
@@ -167,7 +193,7 @@ async function main() {
     const precioRaw = row["Precio (Q)"];
     const categoriaRaw = String(row["Categoría"] ?? "").trim();
     const marca = row["Marca"] ? String(row["Marca"]).trim() : null;
-    const fotoUrl = row["Fotografía (URL)"] ? String(row["Fotografía (URL)"]).trim() : null;
+    const fotoUrls = collectPhotoUrls(row as unknown as Record<string, unknown>);
     const material = row["Material"] ? String(row["Material"]).trim() : null;
 
     if (!descripcion) {
@@ -258,25 +284,36 @@ async function main() {
       create: { variantId: variant.id, cantidadDisponible: 0, umbralStockBajo: 5 },
     });
 
-    if (fotoUrl && !skipImages) {
-      try {
-        const destPath = `productos/${externalId}.${guessExtension(fotoUrl)}`;
-        const publicUrl = await uploadImageIfNeeded(storage, bucket, fotoUrl, destPath);
-        if (publicUrl) {
-          const existingImage = await prisma.productImage.findFirst({ where: { productId: product.id } });
-          if (existingImage) {
-            await prisma.productImage.update({ where: { id: existingImage.id }, data: { url: publicUrl } });
-          } else {
-            await prisma.productImage.create({
-              data: { productId: product.id, url: publicUrl, orden: 0, textoAlternativo: descripcion },
-            });
-          }
+    if (fotoUrls.length > 0 && !skipImages) {
+      const uploadedUrls: string[] = [];
+      for (let photoIndex = 0; photoIndex < fotoUrls.length; photoIndex += 1) {
+        const fotoUrl = fotoUrls[photoIndex];
+        try {
+          const destPath = `productos/${externalId}-${photoIndex}.${guessExtension(fotoUrl)}`;
+          const publicUrl = await uploadImageIfNeeded(storage, bucket, fotoUrl, destPath);
+          if (publicUrl) uploadedUrls.push(publicUrl);
+        } catch (error) {
+          advertencias.push({
+            fila,
+            codigo,
+            mensaje: `No se pudo descargar/subir la foto #${photoIndex + 1} (${(error as Error).message})`,
+          });
         }
-      } catch (error) {
-        advertencias.push({
-          fila,
-          codigo,
-          mensaje: `No se pudo descargar/subir la imagen (${(error as Error).message}) — producto importado sin imagen`,
+      }
+
+      // Re-crea las imágenes del producto en el orden de las columnas del
+      // Excel en cada corrida — simple e idempotente: uploadImageIfNeeded ya
+      // evita volver a subir un archivo que no cambió, así que esto no
+      // re-descarga nada, solo mantiene la tabla alineada con el Excel.
+      if (uploadedUrls.length > 0) {
+        await prisma.productImage.deleteMany({ where: { productId: product.id } });
+        await prisma.productImage.createMany({
+          data: uploadedUrls.map((url, orden) => ({
+            productId: product.id,
+            url,
+            orden,
+            textoAlternativo: descripcion,
+          })),
         });
       }
     }
