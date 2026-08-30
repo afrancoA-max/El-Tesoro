@@ -14,6 +14,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* Sin esto, el grid estira .info al alto de la galería (más alta) y el
+     CTA "sticky" de abajo flotaba en ese espacio vacío, separado del resto
+     del contenido — se veía como un hueco en blanco al hacer scroll. */
+  align-self: start;
 }
 
 .brand {
