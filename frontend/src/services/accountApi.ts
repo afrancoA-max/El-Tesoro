@@ -4,11 +4,9 @@ import { ApiError } from "./api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 
-/// Cliente de mutaciones para cuentas/autenticación. Distinto de `apiGet`
-/// (lectura de catálogo, cacheado por Next): estas llamadas siempre van
-/// con `credentials: "include"` (cookies httpOnly de sesión) y nunca se
-/// cachean — cada una refleja el estado de sesión en ese instante.
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type Envelope<T> = ApiEnvelope<T> & { error?: { code: string; message: string } };
+
+async function doFetch<T>(path: string, init?: RequestInit): Promise<{ response: Response; body: Envelope<T> | undefined }> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -19,18 +17,45 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiError("No se pudo conectar con el servidor. Revisa tu conexión.", 0);
   }
+  if (response.status === 204) return { response, body: undefined };
+  const body = (await response.json().catch(() => undefined)) as Envelope<T> | undefined;
+  return { response, body };
+}
 
+function toResult<T>(response: Response, body: Envelope<T> | undefined): T {
   if (response.status === 204) return undefined as T;
-
-  const body = (await response.json().catch(() => undefined)) as ApiEnvelope<T> & {
-    error?: { code: string; message: string };
-  };
-
   if (!response.ok || !body?.success) {
     throw new ApiError(body?.error?.message ?? `Error del servidor (${response.status}).`, response.status);
   }
-
   return body.data;
+}
+
+// Rutas cuyo 401 significa "credenciales inválidas", no "sesión expirada" —
+// reintentar tras un refresh no tiene sentido ahí y podría enmascarar el
+// error real.
+const NO_REFRESH_RETRY = ["/auth/login", "/auth/refresh", "/auth/register"];
+
+/// Cliente de mutaciones para cuentas/autenticación. Distinto de `apiGet`
+/// (lectura de catálogo, cacheado por Next): estas llamadas siempre van
+/// con `credentials: "include"` (cookies httpOnly de sesión) y nunca se
+/// cachean — cada una refleja el estado de sesión en ese instante.
+///
+/// El access token dura poco (15 min) a propósito. Si expiró a mitad de
+/// una sesión larga (ej. usuario llenando el formulario de dirección), un
+/// 401 aquí dispara un refresh silencioso vía la cookie de refresh y
+/// reintenta la petición una sola vez antes de rendirse.
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const first = await doFetch<T>(path, init);
+
+  if (first.response.status === 401 && !NO_REFRESH_RETRY.some((p) => path.startsWith(p))) {
+    const refresh = await doFetch("/auth/refresh", { method: "POST" }).catch(() => undefined);
+    if (refresh?.response.ok) {
+      const retried = await doFetch<T>(path, init);
+      return toResult(retried.response, retried.body);
+    }
+  }
+
+  return toResult(first.response, first.body);
 }
 
 // --- Sesión ---
