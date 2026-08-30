@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
     ],
   },
   output: "standalone",
+  // Módulo 04 — Cuentas de usuario: el frontend y el backend son servicios
+  // Cloud Run distintos, es decir dominios distintos bajo run.app (que está
+  // en la lista pública de sufijos). Un fetch de cliente directo al backend
+  // es cross-site, y Chrome no envía cookies SameSite=Lax en peticiones
+  // cross-site — por eso "No autenticado" aparecía solo en navegadores
+  // reales, no en herramientas de automatización con políticas más laxas.
+  // Proxear /api/* a través del propio origen del frontend hace que, desde
+  // el navegador, toda la sesión sea same-origin.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET ?? "http://localhost:8080";
+    return [{ source: "/api/:path*", destination: `${target}/api/:path*` }];
+  },
 };
 
 export default nextConfig;

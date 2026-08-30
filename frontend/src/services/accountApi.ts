@@ -2,7 +2,11 @@ import { PublicUser, Address } from "@el-tesoro/shared";
 import { ApiEnvelope } from "@/lib/api-types";
 import { ApiError } from "./api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+// Ruta relativa a propósito (no NEXT_PUBLIC_API_URL): pasa por el rewrite
+// de next.config.ts hacia el backend, para que el navegador vea todo como
+// same-origin y las cookies de sesión no queden bloqueadas por SameSite en
+// producción (frontend y backend son dominios distintos en Cloud Run).
+const API_BASE_URL = "/api";
 
 type Envelope<T> = ApiEnvelope<T> & { error?: { code: string; message: string } };
 

@@ -8,6 +8,16 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
+  /* Sin esto, un <select> con una opción larga (ej. "San Rafael La
+     Independencia") fuerza su ancho mínimo de contenido por encima de la
+     pista de 1fr, empujando el grid — y el modal que lo contiene — más
+     ancho que el viewport. min-width:0 permite que el contenido truncado
+     respete el ancho asignado en vez de expandirlo. */
+  min-width: 0;
+}
+
+.row > * {
+  min-width: 0;
 }
 
 @media (min-width: 480px) {

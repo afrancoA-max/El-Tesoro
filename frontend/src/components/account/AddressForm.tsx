@@ -158,6 +158,9 @@ export function AddressForm({ initial, onSubmit, onCancel }: AddressFormProps) {
 }
 
 const selectStyle: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
   fontFamily: "var(--font-body)",
   fontSize: "var(--font-size-base)",
   color: "var(--color-text-primary)",

@@ -22,6 +22,9 @@ env:
   # Docker puede alojar imágenes de distintos servicios sin conflicto.
   REPOSITORY: eltesoro-backend
   API_URL: https://eltesoro-backend-staging-472679541597.us-central1.run.app/api
+  # Sin el sufijo /api (a diferencia de API_URL): next.config.ts le agrega
+  # /api/:path* al armar el destino del rewrite.
+  API_ORIGIN: https://eltesoro-backend-staging-472679541597.us-central1.run.app
   SITE_URL: https://eltesoro-frontend-staging-472679541597.us-central1.run.app
   WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
   DEPLOYER_SA: "eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
@@ -76,6 +79,7 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --port=8080 \
+            --set-env-vars="API_PROXY_TARGET=${{ env.API_ORIGIN }}" \
             --min-instances=1 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 
