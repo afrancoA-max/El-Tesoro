@@ -98,27 +98,23 @@
   .hero {
     flex-direction: row;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-12);
     padding: var(--space-16) var(--space-8);
   }
 
   .copy {
-    flex: 0 1 520px;
+    flex: 1;
   }
 
+  /* Mismo tamaño de foto que la versión de 2 columnas (~236px de lado) —
+     la columna extra crece el mosaico en vez de encoger las fotos, y sin
+     forzar un ancho máximo al <section> no quedan franjas vacías a los
+     lados en pantallas anchas. */
   .mosaic {
-    flex: 0 1 460px;
+    flex: 1;
+    max-width: 720px;
   }
 
   .title {
     font-size: var(--font-size-2xl);
-  }
-}
-
-@media (min-width: 1280px) {
-  .hero {
-    max-width: 1280px;
-    margin: 0 auto;
   }
 }
