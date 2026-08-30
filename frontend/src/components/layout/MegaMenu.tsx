@@ -87,19 +87,29 @@ export function MegaMenu({ departments }: MegaMenuProps) {
               >
                 Ver todo en {activeDepartment.nombre} <span aria-hidden="true">→</span>
               </Link>
-              <div className={styles.categoryGrid}>
-                {activeDepartment.children.map((categoria) => (
-                  <Link
-                    key={categoria.slug}
-                    href={`/categoria/${categoria.slug}`}
-                    className={styles.categoryLink}
-                    onClick={() => setOpen(false)}
-                  >
-                    {categoria.nombre}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                ))}
-              </div>
+              {activeDepartment.children.length > 0 ? (
+                <div className={styles.categoryGrid}>
+                  {activeDepartment.children.map((categoria) => (
+                    <Link
+                      key={categoria.slug}
+                      href={`/categoria/${categoria.slug}`}
+                      className={styles.categoryLink}
+                      onClick={() => setOpen(false)}
+                    >
+                      {categoria.nombre}
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                // Departamentos sin subcategorías (ej. Electrodomésticos, que
+                // el Excel no desglosa) no tienen nada más que mostrar aquí —
+                // sin este texto el panel se ve como si algo no hubiera
+                // cargado en vez de ser una decisión de contenido.
+                <p className={styles.noSubcategories}>
+                  Explora todos los productos disponibles en esta categoría.
+                </p>
+              )}
             </div>
           )}
         </div>

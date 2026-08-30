@@ -125,6 +125,11 @@
   background: var(--color-bg-alt);
 }
 
+.noSubcategories {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 @media (min-width: 640px) {
   .categoryGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

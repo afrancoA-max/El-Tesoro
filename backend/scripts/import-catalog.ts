@@ -195,6 +195,12 @@ async function main() {
     const marca = row["Marca"] ? String(row["Marca"]).trim() : null;
     const fotoUrls = collectPhotoUrls(row as unknown as Record<string, unknown>);
     const material = row["Material"] ? String(row["Material"]).trim() : null;
+    // Antes se ignoraba por completo: todo producto quedaba con stock 0 y
+    // por lo tanto "Agotado" sin importar la existencia real. Un valor no
+    // numérico (celda vacía, texto) se trata como 0, no como rechazo — el
+    // producto igual se importa, solo sin stock hasta tener el dato real.
+    const existenciaRaw = row["Existencia"];
+    const existencia = typeof existenciaRaw === "number" && existenciaRaw >= 0 ? Math.floor(existenciaRaw) : 0;
 
     if (!descripcion) {
       rechazadas.push({ fila, codigo, descripcion, motivo: "Descripción vacía" });
@@ -280,8 +286,8 @@ async function main() {
 
     await prisma.inventory.upsert({
       where: { variantId: variant.id },
-      update: {},
-      create: { variantId: variant.id, cantidadDisponible: 0, umbralStockBajo: 5 },
+      update: { cantidadDisponible: existencia },
+      create: { variantId: variant.id, cantidadDisponible: existencia, umbralStockBajo: 5 },
     });
 
     if (fotoUrls.length > 0 && !skipImages) {
