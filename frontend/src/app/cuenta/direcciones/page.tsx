@@ -36,9 +36,16 @@ function DireccionesContent() {
     }
   }, []);
 
+  // Carga inicial inline (no `load()`) por la misma razón que en
+  // UserContext: react-hooks/set-state-in-effect no puede verificar que una
+  // función externa solo actualice estado tras un await. `load` sigue
+  // usándose desde manejadores de eventos (reintentar, crear, editar…),
+  // donde la regla no aplica.
   useEffect(() => {
-    load();
-  }, [load]);
+    listAddresses()
+      .then(({ items }) => setAddresses(items))
+      .catch(() => setLoadError(true));
+  }, []);
 
   function openCreate() {
     setEditing(undefined);

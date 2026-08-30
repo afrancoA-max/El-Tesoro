@@ -2,31 +2,34 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/account/AuthCard";
 import { Toast, Button } from "@/components/ui";
 import { verifyEmail } from "@/services/accountApi";
 import { ApiError } from "@/services/api";
 
 function VerificarContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("");
+  // Sin token no hay nada que verificar — es un dato derivable en el
+  // render, no un resultado que dependa de un efecto (evita el setState
+  // síncrono dentro del efecto que marca react-hooks/set-state-in-effect).
+  const [asyncStatus, setAsyncStatus] = useState<"loading" | "success" | "error">("loading");
+  const [asyncMessage, setAsyncMessage] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setMessage("Falta el enlace de verificación. Revisa el correo que te enviamos.");
-      return;
-    }
+    if (!token) return;
     verifyEmail(token)
-      .then(() => setStatus("success"))
+      .then(() => setAsyncStatus("success"))
       .catch((err) => {
-        setStatus("error");
-        setMessage(err instanceof ApiError ? err.message : "El enlace es inválido o expiró.");
+        setAsyncStatus("error");
+        setAsyncMessage(err instanceof ApiError ? err.message : "El enlace es inválido o expiró.");
       });
   }, [token]);
+
+  const status = token ? asyncStatus : "error";
+  const message = token ? asyncMessage : "Falta el enlace de verificación. Revisa el correo que te enviamos.";
 
   return (
     <AuthCard title="Verificación de correo">
@@ -34,7 +37,7 @@ function VerificarContent() {
       {status === "success" && (
         <>
           <Toast variant="success" message="¡Tu correo quedó confirmado!" />
-          <Button onClick={() => (window.location.href = "/cuenta/login")}>Iniciar sesión</Button>
+          <Button onClick={() => router.push("/cuenta/login")}>Iniciar sesión</Button>
         </>
       )}
       {status === "error" && (

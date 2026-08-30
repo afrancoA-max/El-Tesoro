@@ -35,9 +35,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // No se llama a `bootstrap` aquí a propósito: react-hooks/set-state-in-effect
+  // marca como riesgoso invocar desde un efecto una función externa que
+  // actualiza estado, porque no puede verificar que el setState ocurra tras
+  // un await. La promesa inline sí lo deja claro para el linter.
   useEffect(() => {
-    bootstrap();
-  }, [bootstrap]);
+    fetchCurrentUser()
+      .then(({ user: current }) => {
+        setUser(current);
+        setStatus("authenticated");
+      })
+      .catch(() => {
+        setUser(null);
+        setStatus("unauthenticated");
+      });
+  }, []);
 
   const login = useCallback(async (input: { email: string; password: string }) => {
     const { user: loggedIn } = await loginAccount(input);
