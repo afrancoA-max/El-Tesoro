@@ -249,3 +249,108 @@ model Inventory {
 
   @@map("inventory")
 }
+
+// ---------------------------------------------------------------------------
+// Módulo 04 — Cuentas de usuario. Roles desde el día uno (customer/admin/
+// wholesale) aunque admin y wholesale no tengan UI todavía (ver módulos 08 y
+// 11). departamento/municipio de Address son String validados en la capa de
+// aplicación contra la lista fija en shared/src/guatemala.ts, no un enum de
+// Prisma: son ~340 municipios y una migración por cada cambio sería absurdo.
+// ---------------------------------------------------------------------------
+
+enum Role {
+  customer
+  admin
+  wholesale
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  nombre       String
+  telefono     String?
+  /// NIT guatemalteco o "CF" (Consumidor Final). Formato validado en
+  /// validators/, no aquí.
+  nit          String?
+  role         Role      @default(customer)
+  emailVerifiedAt DateTime?
+
+  addresses                Address[]
+  emailVerificationTokens  EmailVerificationToken[]
+  passwordResetTokens      PasswordResetToken[]
+  refreshTokens            RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+/// Libreta de direcciones del cliente, restringida a Guatemala en fase 1.
+model Address {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  alias              String?
+  nombreDestinatario String
+  telefono           String
+  departamento       String
+  municipio          String
+  direccion          String
+  referencia         String?
+  esPredeterminada   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+/// Token de un solo uso para verificar el correo de registro. Se almacena
+/// solo el hash (sha256) — el valor crudo va únicamente en el enlace del
+/// correo, nunca en la base de datos.
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+/// Token de un solo uso para "olvidé mi contraseña". Mismo esquema de hash
+/// que EmailVerificationToken.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Refresh token opaco (no JWT): permite revocar sesiones individuales en
+/// logout o al cambiar contraseña, algo que un JWT stateless no soporta.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}

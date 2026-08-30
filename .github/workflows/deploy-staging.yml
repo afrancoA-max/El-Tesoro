@@ -19,6 +19,13 @@ env:
   SQL_CONNECTION_NAME: project-26c70338-0265-4c7e-837:us-central1:proyectoalmaceneltesoro
   WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
   DEPLOYER_SA: "eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
+  # Módulo 04 — Cuentas de usuario: URL pública del frontend de staging
+  # (debe coincidir con SITE_URL de deploy-staging-frontend.yml) para armar
+  # los enlaces de verificación/recuperación, y el remitente verificado en
+  # Brevo (ver backend/.env.example).
+  FRONTEND_URL: https://eltesoro-frontend-staging-472679541597.us-central1.run.app
+  EMAIL_FROM: afranco.sears@gmail.com
+  EMAIL_FROM_NAME: "Almacén El Tesoro"
 
 permissions:
   contents: read
@@ -86,8 +93,8 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --add-cloudsql-instances=${{ env.SQL_CONNECTION_NAME }} \
-            --set-secrets=DATABASE_URL=eltesoro-staging-database-url:latest \
-            --set-env-vars="NODE_ENV=production,CORS_ORIGINS=*" \
+            --set-secrets=DATABASE_URL=eltesoro-staging-database-url:latest,JWT_ACCESS_SECRET=eltesoro-jwt-access-secret:latest,BREVO_API_KEY=eltesoro-brevo-api-key:latest \
+            --set-env-vars="NODE_ENV=production,CORS_ORIGINS=*,FRONTEND_URL=${{ env.FRONTEND_URL }},EMAIL_FROM=${{ env.EMAIL_FROM }},EMAIL_FROM_NAME=${{ env.EMAIL_FROM_NAME }}" \
             --min-instances=1 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 

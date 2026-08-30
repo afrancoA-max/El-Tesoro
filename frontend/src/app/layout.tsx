@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/Footer";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { getCategoryTree } from "@/services/catalogService";
 import { CategoryNode } from "@/lib/api-types";
+import { UserProvider } from "@/context/UserContext";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -52,9 +53,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
-        <Header categoryTree={categoryTree} />
-        {children}
-        <Footer categoryTree={categoryTree} />
+        <UserProvider>
+          <Header categoryTree={categoryTree} />
+          {children}
+          <Footer categoryTree={categoryTree} />
+        </UserProvider>
       </body>
     </html>
   );
