@@ -19,7 +19,9 @@ const cartWithDetails = Prisma.validator<Prisma.CartDefaultArgs>()({
       include: {
         variant: {
           include: {
-            product: { select: { slug: true, nombre: true, estado: true } },
+            product: {
+              select: { slug: true, nombre: true, estado: true, images: { orderBy: { orden: "asc" }, take: 1 } },
+            },
             inventory: true,
             images: { orderBy: { orden: "asc" }, take: 1 },
             atributos: { include: { attributeValue: { include: { attributeType: true } } } },
@@ -73,7 +75,7 @@ function toCartView(cart: CartWithDetails): CartView {
       productSlug: item.variant.product.slug,
       nombre: item.variant.product.nombre,
       sku: item.variant.sku,
-      imagen: item.variant.images[0]?.url ?? null,
+      imagen: item.variant.images[0]?.url ?? item.variant.product.images[0]?.url ?? null,
       atributos: item.variant.atributos.map((a) => ({
         tipo: a.attributeValue.attributeType.nombre,
         valor: a.attributeValue.valor,
