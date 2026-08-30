@@ -5,6 +5,7 @@ import { TrustBadges } from "@/components/home/TrustBadges";
 import { BrandsStrip } from "@/components/home/BrandsStrip";
 import { Banner } from "@/components/home/Banner";
 import { CategoryRail } from "@/components/home/CategoryRail";
+import { NewsletterPopup } from "@/components/home/NewsletterPopup";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { ErrorState } from "@/components/catalog/ErrorState";
 import { getCategoryTree, getCategoryProducts } from "@/services/catalogService";
@@ -144,6 +145,8 @@ export default async function HomePage() {
 
       <TrustBadges />
       <BrandsStrip brands={data.brands} />
+
+      <NewsletterPopup images={data.heroImages.slice(0, 4)} />
     </main>
   );
 }

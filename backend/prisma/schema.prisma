@@ -340,6 +340,19 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+/// Suscriptores al boletín de ofertas (popup del home). Independiente de
+/// User: suscribirse no requiere cuenta, y una cuenta no implica
+/// suscripción — son consentimientos distintos.
+model NewsletterSubscriber {
+  id        String   @id @default(uuid())
+  nombre    String
+  apellido  String
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("newsletter_subscribers")
+}
+
 /// Refresh token opaco (no JWT): permite revocar sesiones individuales en
 /// logout o al cambiar contraseña, algo que un JWT stateless no soporta.
 model RefreshToken {

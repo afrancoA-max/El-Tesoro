@@ -67,6 +67,61 @@
   display: inline-flex;
 }
 
+.accountLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: transparent;
+  border: none;
+  color: var(--color-text-on-navy);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.accountLink:hover {
+  background: rgba(245, 241, 230, 0.12);
+}
+
+.accountIconWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.accountIconWrap svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Indica sesión iniciada de un vistazo, sin depender solo del texto (que
+   se oculta en pantallas angostas). */
+.accountDot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  border: 1.5px solid var(--color-navy);
+}
+
+.accountLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .accountLabel {
+    display: none;
+  }
+}
+
 @media (min-width: 768px) {
   .megaMenuSlot {
     display: block;

@@ -20,6 +20,14 @@ export const registerRateLimiter = rateLimit({
   message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
 });
 
+export const newsletterRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
+});
+
 export const passwordResetRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

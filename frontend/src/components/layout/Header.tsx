@@ -8,6 +8,7 @@ import { MegaMenu } from "./MegaMenu";
 import { MobileNav } from "./MobileNav";
 import { SearchBar } from "./SearchBar";
 import { CategoryNode } from "@/lib/api-types";
+import { useUser } from "@/context/UserContext";
 
 export interface HeaderProps {
   categoryTree: CategoryNode[];
@@ -15,6 +16,7 @@ export interface HeaderProps {
 
 export function Header({ categoryTree }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, status } = useUser();
 
   return (
     <header className={styles.header}>
@@ -37,11 +39,22 @@ export function Header({ categoryTree }: HeaderProps) {
         <SearchBar />
 
         <div className={styles.actions}>
-          <Link href="/cuenta" className={styles.iconButton} aria-label="Mi cuenta" title="Mi cuenta">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+          <Link
+            href={status === "authenticated" ? "/cuenta/perfil" : "/cuenta/login"}
+            className={styles.accountLink}
+            aria-label={status === "authenticated" ? `Mi cuenta — sesión iniciada como ${user!.nombre}` : "Iniciar sesión"}
+            title={status === "authenticated" ? `Hola, ${user!.nombre.split(" ")[0]}` : "Iniciar sesión"}
+          >
+            <span className={styles.accountIconWrap}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              {status === "authenticated" && <span className={styles.accountDot} aria-hidden="true" />}
+            </span>
+            <span className={styles.accountLabel}>
+              {status === "authenticated" ? user!.nombre.split(" ")[0] : "Iniciar sesión"}
+            </span>
           </Link>
           <button
             type="button"
