@@ -7,6 +7,7 @@ import { getCategoryTree } from "@/services/catalogService";
 import { CategoryNode } from "@/lib/api-types";
 import { UserProvider } from "@/context/UserContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
+import { CartProvider } from "@/context/CartContext";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -56,9 +57,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
         <UserProvider>
           <FavoritesProvider>
-            <Header categoryTree={categoryTree} />
-            {children}
-            <Footer categoryTree={categoryTree} />
+            <CartProvider>
+              <Header categoryTree={categoryTree} />
+              {children}
+              <Footer categoryTree={categoryTree} />
+            </CartProvider>
           </FavoritesProvider>
         </UserProvider>
       </body>

@@ -16,6 +16,11 @@ export interface CategoryNode {
   children: CategoryNode[];
 }
 
+export interface VarianteUnica {
+  id: string;
+  disponible: boolean;
+}
+
 export interface ProductListItem {
   id: string;
   slug: string;
@@ -29,6 +34,10 @@ export interface ProductListItem {
   // origen tenga la columna "Material" (ver backend/scripts/import-catalog.ts).
   materiales: string[];
   imagenPrincipal: string | null;
+  // Solo presente si el producto tiene exactamente una variante — permite
+  // agregar al carrito directo desde la tarjeta (Módulo 05) sin pasar por
+  // la ficha, donde sí hay que elegir Talla/Color/etc.
+  varianteUnica: VarianteUnica | null;
   createdAt: string;
 }
 
@@ -83,6 +92,7 @@ export interface SearchResultItem {
   descripcionCorta: string | null;
   precioDesde: number;
   imagenPrincipal: string | null;
+  varianteUnica: VarianteUnica | null;
 }
 
 export interface PaginatedSearch {

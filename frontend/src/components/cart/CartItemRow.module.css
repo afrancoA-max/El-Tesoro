@@ -1,0 +1,147 @@
+.row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  transition: opacity var(--transition-fast);
+}
+
+.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.compact {
+  grid-template-columns: 56px 1fr auto;
+}
+
+.imageWrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-bg-alt);
+  flex-shrink: 0;
+}
+
+.compact .imageWrap {
+  width: 56px;
+  height: 56px;
+}
+
+.image {
+  object-fit: cover;
+}
+
+.imagePlaceholder {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-alt);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.name:hover {
+  text-decoration: underline;
+}
+
+.attrs {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.warning {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.notice {
+  font-size: var(--font-size-xs);
+  color: var(--color-gold-hover);
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.stepButton {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+.stepButton:disabled {
+  color: var(--color-border-strong);
+  cursor: not-allowed;
+}
+
+.stepButton:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+}
+
+.quantity {
+  min-width: 24px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.removeButton {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  text-decoration: underline;
+}
+
+.removeButton:hover {
+  color: var(--color-danger);
+}
+
+.subtotal {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}

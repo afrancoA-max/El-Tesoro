@@ -1,0 +1,126 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 36, 49, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+  animation: fadeIn var(--transition-base);
+}
+
+.drawer {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  animation: slideIn var(--transition-base);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.closeButton:hover {
+  background: var(--color-bg-alt);
+  color: var(--color-text-primary);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.items {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: var(--space-2);
+}
+
+.footer {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subtotalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.subtotalValue {
+  font-size: var(--font-size-lg);
+  color: var(--color-red);
+}
+
+.footerNote {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.viewCartLink {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-navy);
+  text-decoration: underline;
+  padding: var(--space-1);
+}
+
+.checkoutButton {
+  width: 100%;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}

@@ -126,6 +126,7 @@ model ProductVariant {
   atributos VariantAttributeValue[]
   images    ProductImage[]          @relation("VariantImages")
   inventory Inventory?
+  cartItems CartItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -280,6 +281,7 @@ model User {
   emailVerificationTokens  EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
   refreshTokens            RefreshToken[]
+  cart                     Cart?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -366,4 +368,62 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 05 — Carrito. Anónimo (cartToken en cookie, 30 días — confirmado con
+// el negocio) o de cuenta (userId), fusionados al iniciar sesión (ver
+// cart.service.ts). Este módulo solo VALIDA stock contra
+// Inventory.cantidadDisponible; la reserva (cantidadReservada) es exclusiva
+// del checkout (Módulo 06) — ver docs/plan/05-carrito.md sección 6.
+// ---------------------------------------------------------------------------
+
+enum CartStatus {
+  activo
+  convertido
+  abandonado
+}
+
+model Cart {
+  id     String  @id @default(uuid())
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Identificador opaco del carrito de invitado (cookie httpOnly, no JWT:
+  /// no necesita payload, solo debe ser impredecible y verificable contra la
+  /// tabla). Null en carritos de cuenta.
+  cartToken String? @unique
+
+  estado CartStatus @default(activo)
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("carts")
+}
+
+model CartItem {
+  id     String @id @default(uuid())
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  cantidad Int
+
+  /// Precio al momento de agregar/actualizar cantidad — referencia para
+  /// avisar si cambió, nunca la fuente de verdad del total mostrado (ese
+  /// siempre se recalcula con el precio actual de la variante).
+  precioUnitarioCongelado Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+  @@index([variantId])
+  @@map("cart_items")
 }

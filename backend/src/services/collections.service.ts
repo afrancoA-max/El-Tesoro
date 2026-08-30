@@ -29,7 +29,7 @@ export async function listCollectionProducts(slug: string, pagination: Paginatio
         product: {
           include: {
             images: { orderBy: { orden: "asc" }, take: 1 },
-            variants: { where: { activo: true }, select: { precio: true } },
+            variants: { where: { activo: true }, select: { id: true, precio: true, inventory: true } },
           },
         },
       },
@@ -46,6 +46,10 @@ export async function listCollectionProducts(slug: string, pagination: Paginatio
       nombre: product.nombre,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
       imagenPrincipal: product.images[0]?.url ?? null,
+      varianteUnica:
+        product.variants.length === 1
+          ? { id: product.variants[0].id, disponible: (product.variants[0].inventory?.cantidadDisponible ?? 0) > 0 }
+          : null,
     };
   });
 

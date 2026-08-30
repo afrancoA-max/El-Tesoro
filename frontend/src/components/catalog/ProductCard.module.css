@@ -95,3 +95,21 @@
   color: var(--color-red);
   font-size: var(--font-size-base);
 }
+
+/* Visible siempre en mobile (skill ux-design-system 4.1); en desktop se
+   revela solo en hover/focus de la tarjeta para no competir visualmente con
+   el resto del grid. */
+.quickAddSlot {
+  transition: opacity var(--transition-fast);
+}
+
+@media (min-width: 1024px) {
+  .quickAddSlot {
+    opacity: 0;
+  }
+
+  .card:hover .quickAddSlot,
+  .card:focus-within .quickAddSlot {
+    opacity: 1;
+  }
+}

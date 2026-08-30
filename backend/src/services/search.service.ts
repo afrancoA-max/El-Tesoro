@@ -8,6 +8,7 @@ export interface SearchResultItem {
   descripcionCorta: string | null;
   precioDesde: number | null;
   imagenPrincipal: string | null;
+  varianteUnica: { id: string; disponible: boolean } | null;
 }
 
 export async function searchProducts(
@@ -21,7 +22,7 @@ export async function searchProducts(
       where: { estado: "activo", busqueda: { contains: term } },
       include: {
         images: { orderBy: { orden: "asc" }, take: 1 },
-        variants: { where: { activo: true }, select: { precio: true } },
+        variants: { where: { activo: true }, select: { id: true, precio: true, inventory: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: pagination.skip,
@@ -38,6 +39,10 @@ export async function searchProducts(
       descripcionCorta: p.descripcionCorta,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
       imagenPrincipal: p.images[0]?.url ?? null,
+      varianteUnica:
+        p.variants.length === 1
+          ? { id: p.variants[0].id, disponible: (p.variants[0].inventory?.cantidadDisponible ?? 0) > 0 }
+          : null,
     };
   });
 

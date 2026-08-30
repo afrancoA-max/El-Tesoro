@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ProductDetail, ProductVariant } from "@/lib/api-types";
 import { formatCurrency } from "@/lib/format";
 import { Badge, Button, FavoriteButton } from "@/components/ui";
+import { useCart } from "@/context/CartContext";
+import { ApiError } from "@/services/api";
 import { ProductGallery } from "./ProductGallery";
 import styles from "./ProductViewer.module.css";
 
@@ -46,6 +48,23 @@ export function ProductViewer({ product }: ProductViewerProps) {
   const disponible = activeVariant?.disponible ?? false;
   const precio = activeVariant?.precio ?? "0";
   const precioComparativo = activeVariant?.precioComparativo ?? null;
+
+  const { addItem } = useCart();
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const handleAddToCart = async () => {
+    if (!activeVariant || adding) return;
+    setAdding(true);
+    setAddError(null);
+    try {
+      await addItem(activeVariant.id, 1);
+    } catch (error) {
+      setAddError(error instanceof ApiError ? error.message : "No se pudo agregar al carrito.");
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <div className={styles.wrap}>
@@ -94,8 +113,8 @@ export function ProductViewer({ product }: ProductViewerProps) {
         )}
 
         <div className={styles.ctaRow}>
-          <Button variant="primary" size="md" disabled title="Disponible próximamente — el carrito llega en el Módulo 05">
-            Agregar al carrito
+          <Button variant="primary" size="md" disabled={!disponible || adding} onClick={handleAddToCart}>
+            {adding ? "Agregando…" : "Agregar al carrito"}
           </Button>
           <FavoriteButton
             size="md"
@@ -107,8 +126,8 @@ export function ProductViewer({ product }: ProductViewerProps) {
               imagenPrincipal: product.imagenes[0]?.url ?? null,
             }}
           />
-          <span className={styles.ctaNote}>Próximamente</span>
         </div>
+        {addError && <p className={styles.ctaError}>{addError}</p>}
 
         {product.especificaciones && Object.keys(product.especificaciones).length > 0 && (
           <div className={styles.specsBlock}>

@@ -5,6 +5,7 @@ import { FavoriteItem } from "@/context/FavoritesContext";
 import { formatCurrency } from "@/lib/format";
 import { getBrandAccentColor } from "@/lib/brandTheme";
 import { Badge, FavoriteButton } from "@/components/ui";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import styles from "./ProductCard.module.css";
 
 export interface ProductCardProps {
@@ -14,6 +15,7 @@ export interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const disponible = "disponible" in product ? product.disponible : true;
   const marca = "marca" in product ? product.marca : null;
+  const varianteUnica = "varianteUnica" in product ? product.varianteUnica : null;
 
   return (
     <Link href={`/producto/${product.slug}`} className={styles.card}>
@@ -62,6 +64,11 @@ export function ProductCard({ product }: ProductCardProps) {
             orden de encabezados (heading-order, Compuerta SEO #1). */}
         <p className={styles.name}>{product.nombre}</p>
         <p className={styles.price}>Desde {formatCurrency(product.precioDesde)}</p>
+        {varianteUnica && (
+          <span className={styles.quickAddSlot}>
+            <AddToCartButton variantId={varianteUnica.id} nombre={product.nombre} disponible={varianteUnica.disponible} />
+          </span>
+        )}
       </div>
     </Link>
   );

@@ -41,6 +41,15 @@ function toSummary(product: ProductWithVariants) {
     ),
   );
 
+  // Solo cuando el producto tiene exactamente una variante (sin selector de
+  // Talla/Color/etc.) se puede agregar al carrito directo desde la tarjeta,
+  // sin pasar por la ficha — ver docs/plan/05-carrito.md punto 2. Con más de
+  // una variante, la tarjeta no tiene forma de saber cuál eligió el cliente.
+  const varianteUnica =
+    product.variants.length === 1
+      ? { id: product.variants[0].id, disponible: (product.variants[0].inventory?.cantidadDisponible ?? 0) > 0 }
+      : null;
+
   return {
     id: product.id,
     slug: product.slug,
@@ -56,6 +65,7 @@ function toSummary(product: ProductWithVariants) {
     // frontend funcione en cuanto haya datos, sin otro cambio de API.
     materiales,
     imagenPrincipal: product.images[0]?.url ?? product.variants[0]?.images?.[0]?.url ?? null,
+    varianteUnica,
     createdAt: product.createdAt,
   };
 }

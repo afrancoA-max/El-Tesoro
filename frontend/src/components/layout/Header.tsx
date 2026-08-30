@@ -10,6 +10,8 @@ import { SearchBar } from "./SearchBar";
 import { CategoryNode } from "@/lib/api-types";
 import { useUser } from "@/context/UserContext";
 import { useFavorites } from "@/context/FavoritesContext";
+import { useCart } from "@/context/CartContext";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 export interface HeaderProps {
   categoryTree: CategoryNode[];
@@ -19,6 +21,7 @@ export function Header({ categoryTree }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, status } = useUser();
   const { count: favoritesCount } = useFavorites();
+  const { cart, openDrawer } = useCart();
 
   return (
     <header className={styles.header}>
@@ -76,14 +79,20 @@ export function Header({ categoryTree }: HeaderProps) {
           <button
             type="button"
             className={styles.iconButton}
-            aria-label="Carrito de compras"
-            title="Carrito (funcionalidad del Módulo 05, aún no implementada)"
+            aria-label={cart.totalUnidades > 0 ? `Carrito (${cart.totalUnidades})` : "Carrito de compras"}
+            title="Carrito"
+            onClick={openDrawer}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="9" cy="21" r="1" />
               <circle cx="20" cy="21" r="1" />
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
+            {cart.totalUnidades > 0 && (
+              <span className={styles.favoritesBadge} aria-hidden="true">
+                {cart.totalUnidades > 9 ? "9+" : cart.totalUnidades}
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -99,6 +108,7 @@ export function Header({ categoryTree }: HeaderProps) {
 
       {mobileOpen && <MobileNav departments={categoryTree} onNavigate={() => setMobileOpen(false)} />}
       <div className={styles.brandStripe} aria-hidden="true" />
+      <CartDrawer />
     </header>
   );
 }
