@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { ProductViewer } from "@/components/product/ProductViewer";
-import { ProductGrid } from "@/components/catalog/ProductGrid";
+import { RelatedCarousel } from "@/components/product/RelatedCarousel";
 import { ErrorState } from "@/components/catalog/ErrorState";
 import { getProduct } from "@/services/catalogService";
 import { ApiError } from "@/services/api";
@@ -113,7 +113,7 @@ export default async function ProductPage({ params }: PageProps) {
       {product.relacionados.length > 0 && (
         <section className={styles.related}>
           <h2 className={styles.relatedTitle}>Productos relacionados</h2>
-          <ProductGrid products={product.relacionados} />
+          <RelatedCarousel products={product.relacionados} />
         </section>
       )}
     </main>

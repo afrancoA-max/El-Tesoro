@@ -168,13 +168,14 @@ export async function getProductBySlug(slug: string) {
   // "otros productos de la misma categoría" para que la sección de
   // relacionados no quede vacía mientras tanto. Misma forma que el listado
   // de categoría (toSummary) para que ProductCard los renderice igual.
+  const RELACIONADOS_MAX = 7;
   const relacionados =
     product.relatedFrom.length > 0
-      ? product.relatedFrom.map((r) => toSummary(r.relatedProduct))
+      ? product.relatedFrom.slice(0, RELACIONADOS_MAX).map((r) => toSummary(r.relatedProduct))
       : (
           await prisma.product.findMany({
             where: { estado: "activo", categoriaId: product.categoriaId, id: { not: product.id } },
-            take: 8,
+            take: RELACIONADOS_MAX,
             orderBy: { createdAt: "desc" },
             ...productWithVariants,
           })
