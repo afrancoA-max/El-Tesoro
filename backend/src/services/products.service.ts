@@ -155,13 +155,30 @@ export async function getProductBySlug(slug: string) {
           atributos: { include: { attributeValue: { include: { attributeType: true } } } },
         },
       },
-      relatedFrom: { include: { relatedProduct: { include: { images: true, variants: true } } } },
+      relatedFrom: { include: { relatedProduct: { ...productWithVariants } } },
     },
   });
 
   if (!product) {
     throw AppError.notFound("PRODUCT_NOT_FOUND", `No existe el producto con slug '${slug}'.`);
   }
+
+  // Nadie ha curado relaciones todavía (tabla ProductRelation vacía en la
+  // práctica — no hay panel admin para eso, ver Módulo 08), así que caemos a
+  // "otros productos de la misma categoría" para que la sección de
+  // relacionados no quede vacía mientras tanto. Misma forma que el listado
+  // de categoría (toSummary) para que ProductCard los renderice igual.
+  const relacionados =
+    product.relatedFrom.length > 0
+      ? product.relatedFrom.map((r) => toSummary(r.relatedProduct))
+      : (
+          await prisma.product.findMany({
+            where: { estado: "activo", categoriaId: product.categoriaId, id: { not: product.id } },
+            take: 8,
+            orderBy: { createdAt: "desc" },
+            ...productWithVariants,
+          })
+        ).map(toSummary);
 
   return {
     id: product.id,
@@ -187,11 +204,6 @@ export async function getProductBySlug(slug: string) {
       })),
       imagenes: v.images.map((img) => img.url),
     })),
-    relacionados: product.relatedFrom.map((r) => ({
-      slug: r.relatedProduct.slug,
-      nombre: r.relatedProduct.nombre,
-      tipo: r.tipo,
-      imagenPrincipal: r.relatedProduct.images[0]?.url ?? null,
-    })),
+    relacionados,
   };
 }

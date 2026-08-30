@@ -16,23 +16,26 @@ export interface HeroProps {
 export function Hero({ images, primaryCategorySlug }: HeroProps) {
   return (
     <section className={styles.hero}>
+      <div className={styles.glow} aria-hidden="true" />
       <div className={styles.copy}>
-        <h1 className={styles.title}>Todo para tu cocina y tu hogar</h1>
+        <h1 className={styles.title}>
+          Todo para tu <span className={styles.accent}>cocina</span> y tu hogar
+        </h1>
         <p className={styles.subtitle}>
           Ollas, sartenes, electrodomésticos, cristalería y más — calidad confiable para el día a
           día de tu cocina, en un solo lugar.
         </p>
         <Link
           href={primaryCategorySlug ? `/categoria/${primaryCategorySlug}` : "/buscar"}
-          className={`${buttonStyles.button} ${buttonStyles.primary}`}
+          className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.cta}`}
         >
           Explorar catálogo
         </Link>
       </div>
       <div className={styles.mosaic}>
-        {images.slice(0, 4).map((src, index) => (
-          <div key={src + index} className={styles.mosaicTile}>
-            <Image src={src} alt="" fill sizes="(min-width: 1024px) 20vw, 40vw" priority={index === 0} />
+        {images.slice(0, 6).map((src, index) => (
+          <div key={src + index} className={styles.mosaicTile} style={{ "--i": index } as React.CSSProperties}>
+            <Image src={src} alt="" fill sizes="(min-width: 1024px) 14vw, 30vw" priority={index === 0} />
           </div>
         ))}
       </div>

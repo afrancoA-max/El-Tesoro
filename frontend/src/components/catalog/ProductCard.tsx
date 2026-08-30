@@ -1,13 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProductListItem, SearchResultItem } from "@/lib/api-types";
+import { FavoriteItem } from "@/context/FavoritesContext";
 import { formatCurrency } from "@/lib/format";
 import { getBrandAccentColor } from "@/lib/brandTheme";
-import { Badge } from "@/components/ui";
+import { Badge, FavoriteButton } from "@/components/ui";
 import styles from "./ProductCard.module.css";
 
 export interface ProductCardProps {
-  product: ProductListItem | SearchResultItem;
+  product: ProductListItem | SearchResultItem | FavoriteItem;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
@@ -39,6 +40,17 @@ export function ProductCard({ product }: ProductCardProps) {
             <Badge variant="danger">Agotado</Badge>
           </span>
         )}
+        <span className={styles.favoriteSlot}>
+          <FavoriteButton
+            item={{
+              slug: product.slug,
+              nombre: product.nombre,
+              marca,
+              precioDesde: product.precioDesde,
+              imagenPrincipal: product.imagenPrincipal,
+            }}
+          />
+        </span>
       </div>
       {marca && (
         <span className={styles.brandLine} style={{ backgroundColor: getBrandAccentColor(marca) }} aria-hidden="true" />

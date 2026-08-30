@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ProductDetail, ProductVariant } from "@/lib/api-types";
 import { formatCurrency } from "@/lib/format";
-import { Badge, Button } from "@/components/ui";
+import { Badge, Button, FavoriteButton } from "@/components/ui";
 import { ProductGallery } from "./ProductGallery";
 import styles from "./ProductViewer.module.css";
 
@@ -97,6 +97,16 @@ export function ProductViewer({ product }: ProductViewerProps) {
           <Button variant="primary" size="md" disabled title="Disponible próximamente — el carrito llega en el Módulo 05">
             Agregar al carrito
           </Button>
+          <FavoriteButton
+            size="md"
+            item={{
+              slug: product.slug,
+              nombre: product.nombre,
+              marca: product.marca,
+              precioDesde: Number(precio),
+              imagenPrincipal: product.imagenes[0]?.url ?? null,
+            }}
+          />
           <span className={styles.ctaNote}>Próximamente</span>
         </div>
 

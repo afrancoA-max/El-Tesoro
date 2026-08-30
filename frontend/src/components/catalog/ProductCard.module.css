@@ -50,6 +50,12 @@
   left: var(--space-2);
 }
 
+.favoriteSlot {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
 .body {
   padding: var(--space-3) var(--space-4) var(--space-4);
   display: flex;

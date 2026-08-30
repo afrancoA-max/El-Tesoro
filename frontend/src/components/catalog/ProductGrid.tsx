@@ -1,11 +1,12 @@
 import { ProductListItem, SearchResultItem } from "@/lib/api-types";
+import { FavoriteItem } from "@/context/FavoritesContext";
 import { Skeleton } from "@/components/ui";
 import { ProductCard } from "./ProductCard";
 import { EmptyState } from "./EmptyState";
 import styles from "./ProductGrid.module.css";
 
 export interface ProductGridProps {
-  products: (ProductListItem | SearchResultItem)[];
+  products: (ProductListItem | SearchResultItem | FavoriteItem)[];
   emptyTitle?: string;
   emptyDescription?: string;
   emptyAction?: React.ReactNode;

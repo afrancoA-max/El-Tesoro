@@ -7,6 +7,16 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Franja de marca (2026-08-30, a pedido del negocio): usa las tres marcas
+   registradas del logo — dorado y el rojo real (#FF001E, más saturado que
+   el --color-red histórico que se sigue usando para precios/estados) — sin
+   tocar el resto del header. Dorado como base con un filo rojo: se lee
+   como acento de marca, no como alerta ni como "descuento". */
+.brandStripe {
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-gold) 70%, var(--color-brand-red) 100%);
+}
+
 .bar {
   max-width: 1280px;
   margin: 0 auto;
@@ -40,6 +50,7 @@
 }
 
 .iconButton {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -52,6 +63,23 @@
   cursor: pointer;
   min-width: 44px;
   min-height: 44px;
+  text-decoration: none;
+}
+
+.favoritesBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-brand-red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
 }
 
 .iconButton:hover {

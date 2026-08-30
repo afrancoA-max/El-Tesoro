@@ -27,6 +27,14 @@
   --color-red: #b3453a;
   --color-red-hover: #963a30;
 
+  /* Rojo de marca real del negocio (confirmado 2026-08-30), más saturado que
+     el --color-red histórico de arriba — que sigue usándose para precios y
+     estados de "danger" porque cambiarlo ahí se sentiría demasiado agresivo.
+     Este es para los pocos lugares donde el negocio SÍ quiere ese rojo
+     puntual: la franja de marca del header, favoritos activos, etc. */
+  --color-brand-red: #ff001e;
+  --color-brand-red-hover: #d40019;
+
   /* Color — estado */
   --color-success: #4c7a4c;
   --color-success-bg: #eaf3ea;

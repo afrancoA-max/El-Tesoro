@@ -1,22 +1,43 @@
 .hero {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
   padding: var(--space-8) var(--space-4);
   background: var(--color-navy);
   color: var(--color-text-on-navy);
+  overflow: hidden;
+}
+
+/* Resplandor ambiental, sutil y estático en tamaño (nada que distraiga la
+   lectura) — el único "efecto" pedido para dar impacto sin dejar de verse
+   minimalista. Se apaga con prefers-reduced-motion igual que la entrada
+   escalonada del mosaico, más abajo. */
+.glow {
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 480px;
+  background: radial-gradient(closest-side, rgba(227, 167, 35, 0.16), transparent 70%);
+  pointer-events: none;
 }
 
 .copy {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   max-width: 640px;
+  animation: fadeUp 700ms ease both;
 }
 
 .title {
   font-size: var(--font-size-2xl);
   color: var(--color-text-on-navy);
+  text-wrap: balance;
+}
+
+.accent {
+  color: var(--color-gold);
 }
 
 .subtitle {
@@ -24,9 +45,20 @@
   font-size: var(--font-size-base);
 }
 
+.cta {
+  width: fit-content;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
 .mosaic {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
 }
 
@@ -36,29 +68,57 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--color-navy-surface);
+  animation: fadeUp 600ms ease both;
+  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
 }
 
 .mosaicTile img {
   object-fit: cover;
 }
 
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy,
+  .mosaicTile {
+    animation: none;
+  }
+}
+
 @media (min-width: 1024px) {
   .hero {
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+    gap: var(--space-12);
     padding: var(--space-16) var(--space-8);
   }
 
   .copy {
-    flex: 1;
+    flex: 0 1 520px;
   }
 
   .mosaic {
-    flex: 1;
-    max-width: 480px;
+    flex: 0 1 460px;
   }
 
   .title {
     font-size: var(--font-size-2xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero {
+    max-width: 1280px;
+    margin: 0 auto;
   }
 }
