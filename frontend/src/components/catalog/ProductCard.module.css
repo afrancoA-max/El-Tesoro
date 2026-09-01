@@ -17,7 +17,10 @@
 
 .imageWrap {
   position: relative;
-  aspect-ratio: 4 / 5;
+  /* Cuadrado (1:1), igual que la galería de la ficha de producto — antes
+     era 4:5 (vertical), así que la misma foto se recortaba distinto en
+     cada lugar. Ver recomendación de fotografía en docs/plan/03. */
+  aspect-ratio: 1 / 1;
   background: var(--color-bg-alt);
 }
 
