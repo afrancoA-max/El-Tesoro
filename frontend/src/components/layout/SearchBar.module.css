@@ -14,6 +14,16 @@
   border-radius: var(--radius-full);
   padding: 0 var(--space-3);
   height: 40px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Reemplaza el anillo de foco azul nativo del navegador por un borde
+   dorado de marca que sigue el contorno redondeado completo de la
+   píldora — se aplica en el contenedor (:focus-within), no en el input,
+   porque outline no respeta border-radius en todos los navegadores. */
+.form:focus-within {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 2px var(--color-gold);
 }
 
 .icon {
@@ -31,6 +41,12 @@
   color: var(--color-text-on-navy);
   font-size: var(--font-size-sm);
   outline: none;
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .input::placeholder {
