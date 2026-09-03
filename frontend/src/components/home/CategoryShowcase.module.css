@@ -35,7 +35,13 @@
 
 @media (min-width: 640px) {
   .card {
-    width: 128px;
+    width: 148px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card {
+    width: 176px;
   }
 }
 
@@ -46,12 +52,13 @@
   border-radius: var(--radius-full);
   overflow: hidden;
   background: var(--color-bg-alt);
-  border: 1px solid var(--color-border);
-  transition: box-shadow var(--transition-base);
+  border: 2px solid var(--color-border);
+  transition: box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
 .card:hover .imageWrap {
   box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-gold);
 }
 
 .imageWrap img {

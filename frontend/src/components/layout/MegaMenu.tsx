@@ -97,7 +97,6 @@ export function MegaMenu({ departments }: MegaMenuProps) {
                       onClick={() => setOpen(false)}
                     >
                       {categoria.nombre}
-                      <span aria-hidden="true">→</span>
                     </Link>
                   ))}
                 </div>

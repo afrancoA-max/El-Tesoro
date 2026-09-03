@@ -17,7 +17,7 @@ export function CategoryShowcase({ items }: { items: CategoryShowcaseItem[] }) {
           <Link key={item.slug} href={`/categoria/${item.slug}`} className={styles.card}>
             <div className={styles.imageWrap}>
               {item.imagen ? (
-                <Image src={item.imagen} alt="" fill sizes="(min-width: 1024px) 18vw, 45vw" />
+                <Image src={item.imagen} alt="" fill sizes="(min-width: 1024px) 176px, (min-width: 640px) 148px, 108px" />
               ) : (
                 <div className={styles.placeholder} aria-hidden="true" />
               )}
