@@ -98,6 +98,12 @@
   .hero {
     flex-direction: row;
     align-items: center;
+    /* Sin esto, .copy y .mosaic (cada uno con su propio max-width) dejan de
+       crecer antes de llenar el ancho completo de la sección en pantallas
+       anchas, y todo el bloque queda pegado a la izquierda con una franja
+       vacía a la derecha. Centrarlos no cambia el tamaño de nada, solo su
+       posición dentro de la franja navy. */
+    justify-content: center;
     padding: var(--space-16) var(--space-8);
   }
 
