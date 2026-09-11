@@ -262,6 +262,10 @@ model Inventory {
 enum Role {
   customer
   admin
+  /// SEG-04: personal de tienda (consulta de precio/stock en
+  /// /staff/inventario). Menos privilegios que admin; el Módulo 08 le
+  /// agregará su propio panel sin volverlo admin.
+  staff
   wholesale
 }
 
