@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
@@ -10,6 +11,11 @@ import { errorHandlerMiddleware } from "./middlewares/errorHandler.middleware";
 
 export function createApp() {
   const app = express();
+
+  // SEG-09: la API solo responde JSON (nunca HTML), así que los defaults
+  // de helmet (X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
+  // etc.) aplican sin necesitar una CSP a medida.
+  app.use(helmet());
 
   app.use(
     cors({

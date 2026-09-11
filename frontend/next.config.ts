@@ -17,6 +17,23 @@ const nextConfig: NextConfig = {
     ],
   },
   output: "standalone",
+
+  // SEG-09: cabeceras de seguridad básicas. Sin CSP estricta todavía (el
+  // sitio carga imágenes de Cloud Storage y no hay inventario de todos los
+  // orígenes externos aún) — X-Frame-Options ya evita el clickjacking, que
+  // es el riesgo principal mientras tanto.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
