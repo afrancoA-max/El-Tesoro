@@ -1,66 +1,10 @@
 import { PublicUser, Address } from "@el-tesoro/shared";
-import { ApiEnvelope } from "@/lib/api-types";
-import { ApiError } from "./api";
+import { apiRequest } from "./httpClient";
 
-// Ruta relativa a propósito (no NEXT_PUBLIC_API_URL): pasa por el rewrite
-// de next.config.ts hacia el backend, para que el navegador vea todo como
-// same-origin y las cookies de sesión no queden bloqueadas por SameSite en
-// producción (frontend y backend son dominios distintos en Cloud Run).
-const API_BASE_URL = "/api";
-
-type Envelope<T> = ApiEnvelope<T> & { error?: { code: string; message: string } };
-
-async function doFetch<T>(path: string, init?: RequestInit): Promise<{ response: Response; body: Envelope<T> | undefined }> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...init?.headers },
-    });
-  } catch {
-    throw new ApiError("No se pudo conectar con el servidor. Revisa tu conexión.", 0);
-  }
-  if (response.status === 204) return { response, body: undefined };
-  const body = (await response.json().catch(() => undefined)) as Envelope<T> | undefined;
-  return { response, body };
-}
-
-function toResult<T>(response: Response, body: Envelope<T> | undefined): T {
-  if (response.status === 204) return undefined as T;
-  if (!response.ok || !body?.success) {
-    throw new ApiError(body?.error?.message ?? `Error del servidor (${response.status}).`, response.status);
-  }
-  return body.data;
-}
-
-// Rutas cuyo 401 significa "credenciales inválidas", no "sesión expirada" —
-// reintentar tras un refresh no tiene sentido ahí y podría enmascarar el
-// error real.
-const NO_REFRESH_RETRY = ["/auth/login", "/auth/refresh", "/auth/register"];
-
-/// Cliente de mutaciones para cuentas/autenticación. Distinto de `apiGet`
-/// (lectura de catálogo, cacheado por Next): estas llamadas siempre van
-/// con `credentials: "include"` (cookies httpOnly de sesión) y nunca se
-/// cachean — cada una refleja el estado de sesión en ese instante.
-///
-/// El access token dura poco (15 min) a propósito. Si expiró a mitad de
-/// una sesión larga (ej. usuario llenando el formulario de dirección), un
-/// 401 aquí dispara un refresh silencioso vía la cookie de refresh y
-/// reintenta la petición una sola vez antes de rendirse.
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const first = await doFetch<T>(path, init);
-
-  if (first.response.status === 401 && !NO_REFRESH_RETRY.some((p) => path.startsWith(p))) {
-    const refresh = await doFetch("/auth/refresh", { method: "POST" }).catch(() => undefined);
-    if (refresh?.response.ok) {
-      const retried = await doFetch<T>(path, init);
-      return toResult(retried.response, retried.body);
-    }
-  }
-
-  return toResult(first.response, first.body);
-}
+// Servicio de dominio para cuentas/autenticación. El cliente HTTP en sí
+// (fetch con cookies, refresh+reintento — CAR-01) vive en httpClient.ts,
+// compartido con cartApi.ts.
+const request = apiRequest;
 
 // --- Sesión ---
 

@@ -15,13 +15,21 @@ const CART_COOKIE_TTL_DAYS = 30;
 /// httpOnly en ambas: el access token de corta duración también viaja en
 /// cookie (no solo Authorization header) para que el frontend Next.js no
 /// tenga que guardar tokens en localStorage/JS accesible (XSS).
+///
+/// CAR-01: la cookie del access token dura tanto como el refresh, no como el
+/// JWT en sí (15 min). Si duraran lo mismo, la cookie desaparece justo
+/// cuando el token expira y optionalAuth ya no puede distinguir "expiró" de
+/// "nunca hubo sesión" — el carrito se ve como el de un invitado nuevo. Con
+/// la cookie viva más tiempo, el navegador sigue mandando el JWT vencido y
+/// optionalAuth puede detectar `TokenExpiredError` para que el cliente HTTP
+/// dispare un refresh en vez de degradar la sesión en silencio.
 export function setAuthCookies(res: Response, tokens: Tokens): void {
   res.cookie(ACCESS_COOKIE, tokens.accessToken, {
     httpOnly: true,
     secure: env.cookieSecure,
     sameSite: "lax",
     path: "/",
-    maxAge: env.jwtAccessTtlMinutes * 60 * 1000,
+    maxAge: env.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
   });
   res.cookie(REFRESH_COOKIE, tokens.refreshToken, {
     httpOnly: true,

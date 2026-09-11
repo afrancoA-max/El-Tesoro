@@ -1,34 +1,17 @@
 import { Cart } from "@el-tesoro/shared";
-import { ApiEnvelope } from "@/lib/api-types";
-import { ApiError } from "./api";
+import { apiRequest } from "./httpClient";
 
-// Mismo patrón que accountApi.ts: mutaciones con cookies de sesión
-// (`credentials: "include"`) y sin caché — el carrito nunca debe mostrar un
-// estado obsoleto. El carrito es anónimo por diseño (Módulo 04), así que a
-// diferencia de accountApi.ts un 401 aquí no significa "sesión expirada",
-// solo "no hay sesión" — no tiene sentido reintentar con refresh.
-const API_BASE_URL = "/api";
-
-type Envelope<T> = ApiEnvelope<T> & { error?: { code: string; message: string } };
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...init?.headers },
-    });
-  } catch {
-    throw new ApiError("No se pudo conectar con el servidor. Revisa tu conexión.", 0);
-  }
-
-  const body = (await response.json().catch(() => undefined)) as Envelope<T> | undefined;
-  if (!response.ok || !body?.success) {
-    throw new ApiError(body?.error?.message ?? `Error del servidor (${response.status}).`, response.status);
-  }
-  return body.data;
-}
+// Servicio de dominio para el carrito. El cliente HTTP en sí vive en
+// httpClient.ts, compartido con accountApi.ts.
+//
+// CAR-01: el carrito es anónimo por diseño y un 401 aquí seguía sin
+// significar "sesión expirada" — pero cuando SÍ había sesión y el access
+// token expiró a medio camino, el backend (`optionalAuth`) degradaba la
+// petición a invitado en silencio (200, carrito vacío) en vez de fallar.
+// httpClient.ts detecta esa degradación por el header `X-Access-Token-
+// Expired` y reintenta tras refrescar, así que estas funciones ya no
+// necesitan su propia lógica de reintento.
+const request = apiRequest;
 
 export function fetchCart() {
   return request<Cart>("/cart");
