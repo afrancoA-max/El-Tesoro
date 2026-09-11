@@ -9,7 +9,7 @@ import { CartItemRow } from "./CartItemRow";
 import styles from "./CartDrawer.module.css";
 
 export function CartDrawer() {
-  const { cart, isDrawerOpen, closeDrawer, updateQuantity, removeItem } = useCart();
+  const { cart, isDrawerOpen, closeDrawer, updateQuantity, acknowledgePriceChange, removeItem } = useCart();
 
   useEffect(() => {
     if (!isDrawerOpen) return;
@@ -57,7 +57,14 @@ export function CartDrawer() {
           <>
             <div className={styles.items}>
               {cart.items.map((item) => (
-                <CartItemRow key={item.id} item={item} onQuantityChange={updateQuantity} onRemove={removeItem} compact />
+                <CartItemRow
+                  key={item.id}
+                  item={item}
+                  onQuantityChange={updateQuantity}
+                  onAcknowledgePriceChange={acknowledgePriceChange}
+                  onRemove={removeItem}
+                  compact
+                />
               ))}
             </div>
 
@@ -66,7 +73,7 @@ export function CartDrawer() {
                 <span>Subtotal</span>
                 <span className={styles.subtotalValue}>{formatCurrency(cart.subtotal)}</span>
               </div>
-              <p className={styles.footerNote}>Envío e impuestos se calculan en el checkout.</p>
+              <p className={styles.footerNote}>Precios con IVA incluido. El envío se calcula en el checkout.</p>
               <Link href="/carrito" onClick={closeDrawer} className={styles.viewCartLink}>
                 Ver carrito completo
               </Link>

@@ -2,11 +2,11 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Cart } from "@el-tesoro/shared";
-import { fetchCart, addCartItem, updateCartItem, removeCartItem, mergeCart } from "@/services/cartApi";
+import { fetchCart, addCartItem, updateCartItem, acknowledgePriceChange, removeCartItem, mergeCart } from "@/services/cartApi";
 import { useUser } from "@/context/UserContext";
 import { createTabChannel } from "@/lib/tabSync";
 
-const EMPTY_CART: Cart = { id: null, items: [], subtotal: 0, totalUnidades: 0 };
+const EMPTY_CART: Cart = { id: null, items: [], subtotal: "0.00", totalUnidades: 0 };
 
 // CAR-02: el contador del carrito no se actualizaba en otras pestañas tras
 // agregar/quitar en una de ellas. Cada mutación exitosa (incluida la fusión
@@ -22,7 +22,8 @@ interface CartContextValue {
   openDrawer: () => void;
   closeDrawer: () => void;
   addItem: (variantId: string, cantidad?: number) => Promise<{ limitado: boolean }>;
-  updateQuantity: (itemId: string, cantidad: number) => Promise<void>;
+  updateQuantity: (itemId: string, cantidad: number) => Promise<{ limitado: boolean }>;
+  acknowledgePriceChange: (itemId: string) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -153,7 +154,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = useCallback(
     async (itemId: string, cantidad: number) => {
       const seq = ++requestSeq.current;
-      const { cart: updated } = await updateCartItem(itemId, cantidad);
+      const { cart: updated, limitado } = await updateCartItem(itemId, cantidad);
+      applyCart(seq, updated);
+      cartChannel.post(updated);
+      return { limitado };
+    },
+    [applyCart],
+  );
+
+  const acknowledgePriceChangeCallback = useCallback(
+    async (itemId: string) => {
+      const seq = ++requestSeq.current;
+      const { cart: updated } = await acknowledgePriceChange(itemId);
       applyCart(seq, updated);
       cartChannel.post(updated);
     },
@@ -180,6 +192,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         closeDrawer: () => setDrawerOpen(false),
         addItem,
         updateQuantity,
+        acknowledgePriceChange: acknowledgePriceChangeCallback,
         removeItem,
         refresh,
       }}

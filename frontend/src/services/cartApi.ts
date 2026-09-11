@@ -25,10 +25,16 @@ export function addCartItem(variantId: string, cantidad = 1) {
 }
 
 export function updateCartItem(itemId: string, cantidad: number) {
-  return request<{ cart: Cart }>(`/cart/items/${itemId}`, {
+  return request<{ cart: Cart; limitado: boolean }>(`/cart/items/${itemId}`, {
     method: "PATCH",
     body: JSON.stringify({ cantidad }),
   });
+}
+
+// CAR-11: acepta el precio actual como el nuevo congelado tras mostrar el
+// aviso "antes/ahora" — no cambia la cantidad.
+export function acknowledgePriceChange(itemId: string) {
+  return request<{ cart: Cart }>(`/cart/items/${itemId}/acknowledge-price`, { method: "POST" });
 }
 
 export function removeCartItem(itemId: string) {

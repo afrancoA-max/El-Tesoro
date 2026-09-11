@@ -81,6 +81,22 @@
   font-weight: 600;
 }
 
+.acceptPriceButton {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.acceptPriceButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .controls {
   display: flex;
   align-items: center;

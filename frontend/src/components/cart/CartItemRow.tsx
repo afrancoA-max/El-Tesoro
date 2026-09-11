@@ -5,23 +5,40 @@ import Image from "next/image";
 import Link from "next/link";
 import { CartItem } from "@el-tesoro/shared";
 import { formatCurrency } from "@/lib/format";
+import { ApiError } from "@/services/api";
 import styles from "./CartItemRow.module.css";
+
+// Mismo tope que `backend/src/validators/cart.validator.ts` (MAX_CANTIDAD) —
+// solo de forma, para que el stepper no sugiera que se puede seguir
+// subiendo más allá de lo que el servidor va a aceptar.
+const MAX_CANTIDAD_POR_LINEA = 99;
 
 export interface CartItemRowProps {
   item: CartItem;
-  onQuantityChange: (itemId: string, cantidad: number) => Promise<void>;
+  onQuantityChange: (itemId: string, cantidad: number) => Promise<{ limitado: boolean }>;
+  onAcknowledgePriceChange: (itemId: string) => Promise<void>;
   onRemove: (itemId: string) => Promise<void>;
   compact?: boolean;
 }
 
-export function CartItemRow({ item, onQuantityChange, onRemove, compact = false }: CartItemRowProps) {
+export function CartItemRow({ item, onQuantityChange, onAcknowledgePriceChange, onRemove, compact = false }: CartItemRowProps) {
   const [busy, setBusy] = useState(false);
+  // CAR-07: antes `changeQuantity`/`remove` no tenían `catch` — si la API
+  // fallaba, la promesa se rechazaba sin que el cliente viera nada.
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [priceNoticeDismissed, setPriceNoticeDismissed] = useState(false);
 
   const changeQuantity = async (next: number) => {
     if (next < 1 || busy) return;
     setBusy(true);
+    setRowError(null);
     try {
-      await onQuantityChange(item.id, next);
+      const { limitado } = await onQuantityChange(item.id, next);
+      if (limitado) {
+        setRowError(`Solo hay ${item.stockDisponible} disponibles; ajustamos la cantidad.`);
+      }
+    } catch (error) {
+      setRowError(error instanceof ApiError ? error.message : "No se pudo actualizar la cantidad.");
     } finally {
       setBusy(false);
     }
@@ -30,10 +47,22 @@ export function CartItemRow({ item, onQuantityChange, onRemove, compact = false 
   const remove = async () => {
     if (busy) return;
     setBusy(true);
+    setRowError(null);
     try {
       await onRemove(item.id);
-    } finally {
+    } catch (error) {
+      setRowError(error instanceof ApiError ? error.message : "No se pudo eliminar el producto.");
       setBusy(false);
+    }
+  };
+
+  // CAR-11: acepta el precio actual como el nuevo congelado.
+  const acceptPriceChange = async () => {
+    setPriceNoticeDismissed(true);
+    try {
+      await onAcknowledgePriceChange(item.id);
+    } catch {
+      setPriceNoticeDismissed(false);
     }
   };
 
@@ -57,9 +86,26 @@ export function CartItemRow({ item, onQuantityChange, onRemove, compact = false 
 
         {!item.disponible && <p className={styles.warning}>Ya no está disponible</p>}
         {item.disponible && item.stockLimitado && (
-          <p className={styles.warning}>Solo quedan {item.stockDisponible} disponibles — se ajustó la cantidad.</p>
+          // CAR-06: el servidor no ajusta la cantidad guardada solo al leer
+          // el carrito — el subtotal ya excluye las unidades que exceden el
+          // stock (ver cart.service.ts), así que el mensaje pide reducir en
+          // vez de afirmar un ajuste que no ocurrió.
+          <p className={styles.warning}>
+            Solo quedan {item.stockDisponible} disponibles — reduce la cantidad. El subtotal no incluye las unidades de más.
+          </p>
         )}
-        {item.precioCambio && <p className={styles.notice}>El precio cambió desde que lo agregaste.</p>}
+        {item.disponible && !item.stockLimitado && item.cantidad >= Math.min(item.stockDisponible, MAX_CANTIDAD_POR_LINEA) && (
+          <p className={styles.notice}>Llegaste al máximo disponible ({Math.min(item.stockDisponible, MAX_CANTIDAD_POR_LINEA)}).</p>
+        )}
+        {item.precioCambio && !priceNoticeDismissed && (
+          <p className={styles.notice}>
+            Antes {formatCurrency(item.precioAnteriorCongelado ?? item.precioUnitario)}, ahora {formatCurrency(item.precioUnitario)}.{" "}
+            <button type="button" className={styles.acceptPriceButton} onClick={acceptPriceChange} disabled={busy}>
+              Entendido
+            </button>
+          </p>
+        )}
+        {rowError && <p className={styles.warning}>{rowError}</p>}
 
         <div className={styles.controls}>
           <div className={styles.stepper}>
@@ -79,7 +125,7 @@ export function CartItemRow({ item, onQuantityChange, onRemove, compact = false 
               type="button"
               className={styles.stepButton}
               onClick={() => changeQuantity(item.cantidad + 1)}
-              disabled={busy || item.cantidad >= item.stockDisponible}
+              disabled={busy || item.cantidad >= Math.min(item.stockDisponible, MAX_CANTIDAD_POR_LINEA)}
               aria-label="Aumentar cantidad"
             >
               +

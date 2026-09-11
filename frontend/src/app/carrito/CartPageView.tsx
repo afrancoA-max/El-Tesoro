@@ -9,7 +9,7 @@ import { CartItemRow } from "@/components/cart/CartItemRow";
 import styles from "./page.module.css";
 
 export function CartPageView() {
-  const { cart, status, updateQuantity, removeItem } = useCart();
+  const { cart, status, updateQuantity, acknowledgePriceChange, removeItem } = useCart();
 
   return (
     <main className={styles.main}>
@@ -39,7 +39,13 @@ export function CartPageView() {
         <div className={styles.layout}>
           <div className={styles.items}>
             {cart.items.map((item) => (
-              <CartItemRow key={item.id} item={item} onQuantityChange={updateQuantity} onRemove={removeItem} />
+              <CartItemRow
+                key={item.id}
+                item={item}
+                onQuantityChange={updateQuantity}
+                onAcknowledgePriceChange={acknowledgePriceChange}
+                onRemove={removeItem}
+              />
             ))}
           </div>
 
@@ -49,9 +55,9 @@ export function CartPageView() {
               <span>{cart.totalUnidades} {cart.totalUnidades === 1 ? "producto" : "productos"}</span>
               <span>{formatCurrency(cart.subtotal)}</span>
             </div>
-            <p className={styles.summaryNote}>El envío y los impuestos se calculan en el checkout.</p>
+            <p className={styles.summaryNote}>Precios con IVA incluido. El envío se calcula en el checkout.</p>
             <div className={styles.totalRow}>
-              <span>Total</span>
+              <span>Subtotal</span>
               <span className={styles.totalValue}>{formatCurrency(cart.subtotal)}</span>
             </div>
             <Link href="/checkout">

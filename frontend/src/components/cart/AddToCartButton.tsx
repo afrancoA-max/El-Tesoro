@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { ApiError } from "@/services/api";
 import styles from "./AddToCartButton.module.css";
 
 export interface AddToCartButtonProps {
@@ -18,6 +19,10 @@ export interface AddToCartButtonProps {
 export function AddToCartButton({ variantId, nombre, disponible, className }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [state, setState] = useState<"idle" | "adding" | "added" | "error">("idle");
+  // CAR-07: antes el botón mostraba "No se pudo agregar" sin decir por qué
+  // (agotado, error de red, etc.) — ahora se guarda el motivo del backend
+  // para mostrarlo, en vez de descartar el error en el `catch`.
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!disponible) return null;
 
@@ -26,13 +31,15 @@ export function AddToCartButton({ variantId, nombre, disponible, className }: Ad
     event.stopPropagation();
     if (state === "adding") return;
     setState("adding");
+    setErrorMessage(null);
     try {
       await addItem(variantId, 1);
       setState("added");
       setTimeout(() => setState("idle"), 1500);
-    } catch {
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : "No se pudo agregar al carrito.");
       setState("error");
-      setTimeout(() => setState("idle"), 2000);
+      setTimeout(() => setState("idle"), 2500);
     }
   };
 
@@ -43,9 +50,9 @@ export function AddToCartButton({ variantId, nombre, disponible, className }: Ad
       onClick={handleClick}
       disabled={state === "adding"}
       aria-label={`Agregar ${nombre} al carrito`}
-      title="Agregar al carrito"
+      title={state === "error" ? (errorMessage ?? "No se pudo agregar") : "Agregar al carrito"}
     >
-      {state === "added" ? "Agregado ✓" : state === "error" ? "No se pudo agregar" : state === "adding" ? "Agregando…" : "Agregar al carrito"}
+      {state === "added" ? "Agregado ✓" : state === "error" ? errorMessage ?? "No se pudo agregar" : state === "adding" ? "Agregando…" : "Agregar al carrito"}
     </button>
   );
 }
