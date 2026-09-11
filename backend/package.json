@@ -13,7 +13,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:setup": "npm run prisma:migrate:deploy && npm run prisma:seed",
-    "import:catalogo": "ts-node scripts/import-catalog.ts"
+    "import:catalogo": "ts-node scripts/import-catalog.ts",
+    "create-staff-user": "ts-node scripts/create-staff-user.ts"
   },
   "dependencies": {
     "@el-tesoro/shared": "*",

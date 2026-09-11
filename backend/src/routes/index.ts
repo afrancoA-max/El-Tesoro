@@ -7,6 +7,7 @@ import { authRouter } from "./public/auth.routes";
 import { accountRouter } from "./public/account.routes";
 import { newsletterRouter } from "./public/newsletter.routes";
 import { cartRouter } from "./public/cart.routes";
+import { staffInventoryRouter } from "./public/staffInventory.routes";
 
 export const apiRouter = Router();
 
@@ -18,6 +19,7 @@ apiRouter.use("/auth", authRouter);
 apiRouter.use("/account", accountRouter);
 apiRouter.use("/newsletter", newsletterRouter);
 apiRouter.use("/cart", cartRouter);
+apiRouter.use("/staff/inventory", staffInventoryRouter);
 
 apiRouter.get("/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" } });
