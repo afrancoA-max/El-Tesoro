@@ -94,7 +94,7 @@ jobs:
             --allow-unauthenticated \
             --add-cloudsql-instances=${{ env.SQL_CONNECTION_NAME }} \
             --set-secrets=DATABASE_URL=eltesoro-staging-database-url:latest,JWT_ACCESS_SECRET=eltesoro-jwt-access-secret:latest,BREVO_API_KEY=eltesoro-brevo-api-key:latest,INTERNAL_PROXY_SECRET=eltesoro-internal-proxy-secret:latest \
-            --set-env-vars="NODE_ENV=production,CORS_ORIGINS=*,FRONTEND_URL=${{ env.FRONTEND_URL }},EMAIL_FROM=${{ env.EMAIL_FROM }},EMAIL_FROM_NAME=${{ env.EMAIL_FROM_NAME }}" \
+            --set-env-vars="NODE_ENV=production,CORS_ORIGINS=${{ env.FRONTEND_URL }},FRONTEND_URL=${{ env.FRONTEND_URL }},EMAIL_FROM=${{ env.EMAIL_FROM }},EMAIL_FROM_NAME=${{ env.EMAIL_FROM_NAME }}" \
             --min-instances=1 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 

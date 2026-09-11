@@ -33,14 +33,29 @@ function requiredSecret(name: string, minLength: number, devFallback: string): s
   return resolved;
 }
 
+// SEG-05: con CORS_ORIGINS=* y credentials:true (app.ts), cualquier sitio
+// puede leer respuestas autenticadas (cookies) de un usuario que las visite
+// — el origin debe ser una lista cerrada, nunca "*", en producción.
+function readCorsOrigins(): string[] {
+  const raw = process.env.CORS_ORIGINS ?? "*";
+  const origins = raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const isProduction = (process.env.NODE_ENV ?? "development") === "production";
+  if (isProduction && (origins.length === 0 || origins.includes("*"))) {
+    throw new Error("CORS_ORIGINS debe ser la URL exacta del frontend en producción; no se permite \"*\".");
+  }
+
+  return origins;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 8080),
   databaseUrl: required("DATABASE_URL"),
-  corsOrigins: (process.env.CORS_ORIGINS ?? "*")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  corsOrigins: readCorsOrigins(),
 
   // Módulo 04 — Cuentas de usuario.
   frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
