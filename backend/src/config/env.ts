@@ -51,6 +51,13 @@ export const env = {
   passwordResetTtlHours: Number(process.env.PASSWORD_RESET_TTL_HOURS ?? 1),
   cookieSecure: (process.env.COOKIE_SECURE ?? (process.env.NODE_ENV === "production" ? "true" : "false")) === "true",
 
+  // SEG-02: secreto compartido con el proxy de Next (frontend/src/app/api/
+  // [...path]/route.ts) para confiar en el header con la IP real del
+  // cliente. Vacío = el backend ignora ese header y usa req.ip (hoy la IP
+  // interna del proxy, compartida por todos — igual que antes de este
+  // cambio, nunca peor).
+  internalProxySecret: process.env.INTERNAL_PROXY_SECRET ?? "",
+
   brevoApiKey: process.env.BREVO_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "no-responder@eltesoro.gt",
   emailFromName: process.env.EMAIL_FROM_NAME ?? "Almacén El Tesoro",

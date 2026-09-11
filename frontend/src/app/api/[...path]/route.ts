@@ -8,8 +8,22 @@ import { NextRequest } from "next/server";
 // nuestro control, y reenvía cada header `Set-Cookie` individualmente
 // (Headers.get colapsa cookies múltiples en una sola cadena inválida).
 const BACKEND_ORIGIN = process.env.API_PROXY_TARGET ?? "http://localhost:8080";
+// SEG-02: secreto compartido con el backend (ver
+// backend/src/middlewares/rateLimit.middleware.ts) para que el límite de
+// intentos de login se aplique por cliente real y no por este proxy.
+const INTERNAL_PROXY_SECRET = process.env.INTERNAL_PROXY_SECRET ?? "";
 
 export const dynamic = "force-dynamic";
+
+/// La IP del navegador llega en el `X-Forwarded-For` que pone el balanceador
+/// de Google delante de Cloud Run — Next solo lee el primer valor, nunca
+/// confía en uno que el propio cliente pudiera mandar (se sobreescribe, no
+/// se agrega).
+function resolveClientIp(request: NextRequest): string | null {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const first = forwardedFor?.split(",")[0]?.trim();
+  return first || null;
+}
 
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const url = new URL(`${BACKEND_ORIGIN}/api/${path.join("/")}${request.nextUrl.search}`);
@@ -17,6 +31,16 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const headers = new Headers(request.headers);
   headers.delete("host");
   headers.delete("content-length");
+  headers.delete("x-internal-client-ip");
+  headers.delete("x-internal-proxy-secret");
+
+  if (INTERNAL_PROXY_SECRET) {
+    const clientIp = resolveClientIp(request);
+    if (clientIp) {
+      headers.set("x-internal-client-ip", clientIp);
+      headers.set("x-internal-proxy-secret", INTERNAL_PROXY_SECRET);
+    }
+  }
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
 

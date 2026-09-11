@@ -11,14 +11,19 @@ import {
   meController,
 } from "../../controllers/auth.controller";
 import { requireAuth } from "../../middlewares/auth.middleware";
-import { loginRateLimiter, registerRateLimiter, passwordResetRateLimiter } from "../../middlewares/rateLimit.middleware";
+import {
+  loginRateLimiter,
+  loginEmailRateLimiter,
+  registerRateLimiter,
+  passwordResetRateLimiter,
+} from "../../middlewares/rateLimit.middleware";
 
 export const authRouter = Router();
 
 authRouter.post("/register", registerRateLimiter, registerController);
 authRouter.get("/verify-email", verifyEmailController);
 authRouter.post("/resend-verification", registerRateLimiter, resendVerificationController);
-authRouter.post("/login", loginRateLimiter, loginController);
+authRouter.post("/login", loginRateLimiter, loginEmailRateLimiter, loginController);
 authRouter.post("/refresh", refreshController);
 authRouter.post("/logout", logoutController);
 authRouter.post("/forgot-password", passwordResetRateLimiter, forgotPasswordController);

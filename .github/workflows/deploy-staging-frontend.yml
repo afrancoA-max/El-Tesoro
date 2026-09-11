@@ -80,6 +80,7 @@ jobs:
             --allow-unauthenticated \
             --port=8080 \
             --set-env-vars="API_PROXY_TARGET=${{ env.API_ORIGIN }}" \
+            --set-secrets=INTERNAL_PROXY_SECRET=eltesoro-internal-proxy-secret:latest \
             --min-instances=1 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 
