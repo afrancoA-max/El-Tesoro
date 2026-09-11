@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProductDetail, ProductVariant } from "@/lib/api-types";
 import { formatCurrency } from "@/lib/format";
 import { Badge, Button, FavoriteButton } from "@/components/ui";
@@ -32,6 +32,39 @@ function findMatchingVariant(variants: ProductVariant[], selection: Record<strin
   );
 }
 
+// CAR-04: antes de esto, elegir una combinación de atributos inexistente
+// (p. ej. Color X + Tamaño Y cuando esa variante no existe) caía en
+// `?? firstVariant` — la ficha mostraba precio y stock de OTRA variante y
+// "Agregar al carrito" la metía al carrito sin que el cliente lo notara.
+// Una opción se marca como no disponible si ninguna variante la combina con
+// lo que ya está elegido en los demás atributos.
+function isOptionAvailable(variants: ProductVariant[], selection: Record<string, string>, tipo: string, valor: string): boolean {
+  return variants.some(
+    (variant) =>
+      variant.atributos.some((attr) => attr.tipo === tipo && attr.valor === valor) &&
+      Object.entries(selection).every(
+        ([selTipo, selValor]) => selTipo === tipo || variant.atributos.some((attr) => attr.tipo === selTipo && attr.valor === selValor),
+      ),
+  );
+}
+
+// Al cambiar un atributo, si la combinación resultante no existe, se ajustan
+// los demás atributos a la primera variante que sí combine con el valor
+// recién elegido, en vez de dejar al cliente en un estado sin variante.
+function resolveSelection(
+  variants: ProductVariant[],
+  previous: Record<string, string>,
+  tipo: string,
+  valor: string,
+): Record<string, string> {
+  const next = { ...previous, [tipo]: valor };
+  if (findMatchingVariant(variants, next)) return next;
+
+  const fallback = variants.find((variant) => variant.atributos.some((attr) => attr.tipo === tipo && attr.valor === valor));
+  if (!fallback) return next;
+  return Object.fromEntries(fallback.atributos.map((attr) => [attr.tipo, attr.valor]));
+}
+
 export function ProductViewer({ product }: ProductViewerProps) {
   const attributeOptions = useMemo(() => buildAttributeOptions(product.variantes), [product.variantes]);
   const hasVariantAttributes = attributeOptions.size > 0;
@@ -42,23 +75,48 @@ export function ProductViewer({ product }: ProductViewerProps) {
     return Object.fromEntries(firstVariant.atributos.map((attr) => [attr.tipo, attr.valor]));
   });
 
-  const activeVariant = hasVariantAttributes ? findMatchingVariant(product.variantes, selection) ?? firstVariant : firstVariant;
+  // CAR-04: sin fallback silencioso a `firstVariant` — si la combinación
+  // elegida no existe, `activeVariant` queda `undefined` y la interfaz lo
+  // muestra explícitamente en vez de vender otra variante por error.
+  const activeVariant = hasVariantAttributes ? findMatchingVariant(product.variantes, selection) : firstVariant;
 
   const galleryImages = activeVariant?.imagenes.length ? activeVariant.imagenes : product.imagenes;
   const disponible = activeVariant?.disponible ?? false;
   const precio = activeVariant?.precio ?? "0";
   const precioComparativo = activeVariant?.precioComparativo ?? null;
+  const stockDisponible = activeVariant?.stockDisponible ?? 0;
+  // CAR-03: tope de cantidad en la ficha — el stock real de la variante o
+  // el tope general de 99 por línea, lo que sea menor.
+  const maxCantidad = Math.max(1, Math.min(stockDisponible, 99));
 
   const { addItem } = useCart();
+  const [cantidad, setCantidad] = useState(1);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [addNotice, setAddNotice] = useState<string | null>(null);
+
+  // Si cambia la variante activa (otra combinación de atributos), la
+  // cantidad elegida vuelve a 1 en vez de arrastrar un número que podía
+  // superar el stock de la variante anterior.
+  useEffect(() => {
+    setCantidad(1);
+    setAddNotice(null);
+  }, [activeVariant?.id]);
+
+  const handleSelectAttribute = (tipo: string, valor: string) => {
+    setSelection((prev) => resolveSelection(product.variantes, prev, tipo, valor));
+  };
 
   const handleAddToCart = async () => {
     if (!activeVariant || adding) return;
     setAdding(true);
     setAddError(null);
+    setAddNotice(null);
     try {
-      await addItem(activeVariant.id, 1);
+      const { limitado } = await addItem(activeVariant.id, cantidad);
+      if (limitado) {
+        setAddNotice(`Solo hay ${stockDisponible} disponibles; agregamos ${Math.min(cantidad, stockDisponible)}.`);
+      }
     } catch (error) {
       setAddError(error instanceof ApiError ? error.message : "No se pudo agregar al carrito.");
     } finally {
@@ -92,15 +150,22 @@ export function ProductViewer({ product }: ProductViewerProps) {
                 <div className={styles.variantOptions}>
                   {valores.map((valor) => {
                     const isSelected = selection[tipo] === valor;
+                    const disponibleCombinacion = isOptionAvailable(product.variantes, selection, tipo, valor);
                     return (
                       <button
                         key={valor}
                         type="button"
-                        className={[styles.variantOption, isSelected ? styles.variantOptionActive : ""]
+                        className={[
+                          styles.variantOption,
+                          isSelected ? styles.variantOptionActive : "",
+                          !disponibleCombinacion ? styles.variantOptionUnavailable : "",
+                        ]
                           .filter(Boolean)
                           .join(" ")}
                         aria-pressed={isSelected}
-                        onClick={() => setSelection((prev) => ({ ...prev, [tipo]: valor }))}
+                        disabled={!disponibleCombinacion}
+                        title={!disponibleCombinacion ? "No combina con lo ya elegido" : undefined}
+                        onClick={() => handleSelectAttribute(tipo, valor)}
                       >
                         {valor}
                       </button>
@@ -112,9 +177,46 @@ export function ProductViewer({ product }: ProductViewerProps) {
           </div>
         )}
 
+        {activeVariant && disponible && (
+          <div className={styles.quantityRow}>
+            <span className={styles.quantityLabel}>Cantidad</span>
+            <div className={styles.stepper}>
+              <button
+                type="button"
+                className={styles.stepButton}
+                onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                disabled={cantidad <= 1}
+                aria-label="Reducir cantidad"
+              >
+                −
+              </button>
+              <span className={styles.quantityValue} aria-live="polite">
+                {cantidad}
+              </span>
+              <button
+                type="button"
+                className={styles.stepButton}
+                onClick={() => setCantidad((c) => Math.min(maxCantidad, c + 1))}
+                disabled={cantidad >= maxCantidad}
+                aria-label="Aumentar cantidad"
+              >
+                +
+              </button>
+            </div>
+            {cantidad >= maxCantidad && (
+              <span className={styles.quantityMaxNote}>Llegaste al máximo disponible ({maxCantidad}).</span>
+            )}
+          </div>
+        )}
+
         <div className={styles.ctaRow}>
-          <Button variant="primary" size="md" disabled={!disponible || adding} onClick={handleAddToCart}>
-            {adding ? "Agregando…" : "Agregar al carrito"}
+          <Button
+            variant="primary"
+            size="md"
+            disabled={!activeVariant || !disponible || adding}
+            onClick={handleAddToCart}
+          >
+            {adding ? "Agregando…" : !activeVariant ? "Combinación no disponible" : "Agregar al carrito"}
           </Button>
           <FavoriteButton
             size="md"
@@ -128,6 +230,7 @@ export function ProductViewer({ product }: ProductViewerProps) {
           />
         </div>
         {addError && <p className={styles.ctaError}>{addError}</p>}
+        {addNotice && <p className={styles.ctaNotice}>{addNotice}</p>}
 
         {product.especificaciones && Object.keys(product.especificaciones).length > 0 && (
           <div className={styles.specsBlock}>

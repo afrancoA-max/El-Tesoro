@@ -67,6 +67,7 @@ export interface ProductVariant {
   precioComparativo: string | null;
   activo: boolean;
   disponible: boolean;
+  stockDisponible: number;
   atributos: VariantAttribute[];
   imagenes: ProductImage[];
 }
