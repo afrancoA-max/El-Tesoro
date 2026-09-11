@@ -3,6 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { PublicUser } from "@el-tesoro/shared";
 import { fetchCurrentUser, loginAccount, logoutAccount, registerAccount } from "@/services/accountApi";
+import { createTabChannel } from "@/lib/tabSync";
+
+// CAR-02: cerrar sesión en una pestaña no afectaba a las demás hasta que
+// recargaban. Cada pestaña avisa a las demás por este canal cuando su
+// propia sesión cambia; las demás no confían en el mensaje en sí (podría
+// venir de una pestaña con estado obsoleto) sino que lo usan solo como
+// señal para volver a preguntarle al backend con `/auth/me`.
+const sessionChannel = createTabChannel<{ type: "login" | "logout" }>("eltesoro-session");
 
 type SessionStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -51,10 +59,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
+  // CAR-02: si otra pestaña inicia o cierra sesión, esta vuelve a preguntarle
+  // al backend en vez de copiar el mensaje a ciegas — las cookies de sesión
+  // ya son compartidas entre pestañas, así que `bootstrap` siempre refleja
+  // el estado real sin importar cuál pestaña originó el cambio. `bootstrap`
+  // es estable (useCallback con `[]`), así que suscribirse una sola vez es
+  // seguro.
+  useEffect(() => sessionChannel.subscribe(() => bootstrap()), [bootstrap]);
+
   const login = useCallback(async (input: { email: string; password: string }) => {
     const { user: loggedIn } = await loginAccount(input);
     setUser(loggedIn);
     setStatus("authenticated");
+    sessionChannel.post({ type: "login" });
     return loggedIn;
   }, []);
 
@@ -67,6 +84,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await logoutAccount().catch(() => undefined);
     setUser(null);
     setStatus("unauthenticated");
+    sessionChannel.post({ type: "logout" });
   }, []);
 
   return (
