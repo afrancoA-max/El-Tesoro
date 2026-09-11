@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/account/AuthCard";
 import { Input, Button, Toast } from "@/components/ui";
-import { registerAccount } from "@/services/accountApi";
+import { registerAccount, resendVerification } from "@/services/accountApi";
 import { ApiError } from "@/services/api";
 import formStyles from "@/components/account/Form.module.css";
 
@@ -17,13 +17,17 @@ export default function RegistroPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [emailSent, setEmailSent] = useState(true);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await registerAccount({ nombre, email, password });
+      const result = await registerAccount({ nombre, email, password });
+      setEmailSent(result.emailSent);
       setDone(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No pudimos crear tu cuenta. Intenta de nuevo.");
@@ -32,7 +36,42 @@ export default function RegistroPage() {
     }
   }
 
+  async function handleResend() {
+    setResending(true);
+    try {
+      await resendVerification(email);
+      setResent(true);
+    } catch {
+      // resend-verification no distingue "no existe" de "falló el envío"
+      // (anti-enumeración) — si algo falla aquí, no hay más que ofrecer
+      // que intentar de nuevo más tarde.
+    } finally {
+      setResending(false);
+    }
+  }
+
   if (done) {
+    // SEG-08: la cuenta ya se creó aunque el correo de confirmación no haya
+    // salido — no tiene sentido decirle al cliente que revise su correo si
+    // no le llegó nada.
+    if (!emailSent) {
+      return (
+        <AuthCard title="Cuenta creada">
+          <Toast
+            variant="error"
+            message="Tu cuenta se creó, pero no pudimos enviarte el correo de confirmación."
+          />
+          {resent ? (
+            <Toast variant="success" message={`Reenviamos el enlace de confirmación a ${email}.`} />
+          ) : (
+            <Button variant="outline" onClick={handleResend} disabled={resending}>
+              {resending ? "Enviando…" : "Reenviar verificación"}
+            </Button>
+          )}
+        </AuthCard>
+      );
+    }
+
     return (
       <AuthCard title="Revisa tu correo">
         <Toast

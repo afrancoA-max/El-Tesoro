@@ -14,8 +14,8 @@ import { AppError } from "../utils/AppError";
 export async function registerController(req: Request, res: Response, next: NextFunction) {
   try {
     const input = registerSchema.parse(req.body);
-    const user = await authService.register(input);
-    res.status(201).json({ success: true, data: { user } });
+    const { user, emailSent } = await authService.register(input);
+    res.status(201).json({ success: true, data: { user, emailSent } });
   } catch (error) {
     next(error);
   }

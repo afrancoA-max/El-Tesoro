@@ -39,7 +39,7 @@ async function issueTokens(user: User): Promise<Tokens> {
   return { accessToken, refreshToken: raw, refreshTokenExpiresAt };
 }
 
-export async function register(input: { nombre: string; email: string; password: string }): Promise<PublicUser> {
+export async function register(input: { nombre: string; email: string; password: string }): Promise<{ user: PublicUser; emailSent: boolean }> {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw AppError.conflict("EMAIL_ALREADY_REGISTERED", "Ya existe una cuenta con este correo.");
@@ -50,9 +50,21 @@ export async function register(input: { nombre: string; email: string; password:
     data: { nombre: input.nombre, email: input.email, passwordHash },
   });
 
-  await issueEmailVerificationToken(user);
+  // SEG-08: el usuario ya quedó creado (comprometido por el @@unique en
+  // email) antes de este punto — si el envío del correo falla, NO se puede
+  // relanzar el error como antes: el cliente reintentaría, chocaría con
+  // "Ya existe una cuenta con este correo" y quedaría atascado sin ningún
+  // correo válido para verificarla. En vez de eso, se responde éxito con
+  // emailSent: false y la interfaz ofrece "Reenviar verificación".
+  let emailSent = true;
+  try {
+    await issueEmailVerificationToken(user);
+  } catch (error) {
+    emailSent = false;
+    logger.error({ err: error, userId: user.id }, "El usuario se creó pero no se pudo enviar el correo de verificación.");
+  }
 
-  return toPublicUser(user);
+  return { user: toPublicUser(user), emailSent };
 }
 
 async function issueEmailVerificationToken(user: User): Promise<void> {

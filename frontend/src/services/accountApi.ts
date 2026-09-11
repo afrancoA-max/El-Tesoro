@@ -65,7 +65,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // --- Sesión ---
 
 export function registerAccount(input: { nombre: string; email: string; password: string }) {
-  return request<{ user: PublicUser }>("/auth/register", { method: "POST", body: JSON.stringify(input) });
+  return request<{ user: PublicUser; emailSent: boolean }>("/auth/register", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function loginAccount(input: { email: string; password: string }) {
