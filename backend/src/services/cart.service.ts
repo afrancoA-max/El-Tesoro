@@ -119,13 +119,28 @@ async function findCartId(ctx: CartContext): Promise<string | null> {
 /// Igual que `findCartId`, pero crea el carrito si no existe (para
 /// mutaciones que sí deben persistir algo). Si se crea uno anónimo nuevo,
 /// devuelve el token crudo para que el controlador lo mande en cookie.
+///
+/// CAR-09(c): dos "Agregar" simultáneos del mismo usuario autenticado (sin
+/// carrito todavía) pueden intentar crear su carrito (`userId` es
+/// `@unique`) al mismo tiempo. En vez de dejar que el segundo reviente con
+/// `P2002` (que `errorHandler` ya no convierte en 500, pero sigue siendo un
+/// error visible para lo que era solo un doble clic), se recupera el
+/// carrito que el primero acaba de crear.
 async function resolveOrCreateCartId(ctx: CartContext): Promise<{ cartId: string; newCartToken?: string }> {
   const existingId = await findCartId(ctx);
   if (existingId) return { cartId: existingId };
 
   if (ctx.userId) {
-    const created = await prisma.cart.create({ data: { userId: ctx.userId } });
-    return { cartId: created.id };
+    try {
+      const created = await prisma.cart.create({ data: { userId: ctx.userId } });
+      return { cartId: created.id };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const winner = await prisma.cart.findUnique({ where: { userId: ctx.userId } });
+        if (winner) return { cartId: winner.id };
+      }
+      throw error;
+    }
   }
 
   const { raw, hash } = generateOpaqueToken();
@@ -163,6 +178,13 @@ async function getVariantForCart(variantId: string) {
 /// es del Módulo 06, ver docs/plan/05-carrito.md sección 6). Si la cantidad
 /// pedida excede el stock, se recorta al máximo disponible en vez de
 /// rechazar de plano, salvo que ya no quede nada.
+///
+/// CAR-09(a): dos "Agregar" casi simultáneos a la misma línea ya no leen
+/// `cantidad` y la vuelven a escribir (eso pierde una unidad si ambos leen
+/// antes de que el otro escriba). El `upsert` de actualización usa
+/// `increment`, que Postgres resuelve como una sola sentencia atómica por
+/// fila — el segundo request espera a que el primero termine su
+/// transacción y parte de la cantidad ya sumada, no de la que leyó antes.
 export async function addItem(ctx: CartContext, variantId: string, cantidad: number): Promise<{ cart: CartView; newCartToken?: string; limitado: boolean }> {
   const variant = await getVariantForCart(variantId);
   const stockDisponible = variant.inventory?.cantidadDisponible ?? 0;
@@ -173,21 +195,24 @@ export async function addItem(ctx: CartContext, variantId: string, cantidad: num
 
   const { cartId, newCartToken } = await resolveOrCreateCartId(ctx);
 
-  const existing = await prisma.cartItem.findUnique({ where: { cartId_variantId: { cartId, variantId } } });
-  const cantidadPedida = (existing?.cantidad ?? 0) + cantidad;
-  const cantidadFinal = Math.min(cantidadPedida, stockDisponible);
-  const limitado = cantidadFinal < cantidadPedida;
-
-  await prisma.$transaction([
-    prisma.cartItem.upsert({
+  const { limitado } = await prisma.$transaction(async (tx) => {
+    const upserted = await tx.cartItem.upsert({
       where: { cartId_variantId: { cartId, variantId } },
-      create: { cartId, variantId, cantidad: cantidadFinal, precioUnitarioCongelado: variant.precio },
-      update: { cantidad: cantidadFinal, precioUnitarioCongelado: variant.precio },
-    }),
+      create: { cartId, variantId, cantidad: Math.min(cantidad, stockDisponible), precioUnitarioCongelado: variant.precio },
+      update: { cantidad: { increment: cantidad }, precioUnitarioCongelado: variant.precio },
+    });
+
+    const excedido = upserted.cantidad > stockDisponible;
+    if (excedido) {
+      await tx.cartItem.update({ where: { id: upserted.id }, data: { cantidad: stockDisponible } });
+    }
+
     // Toca `updatedAt` del carrito para reiniciar el conteo de caducidad de
     // 30 días de un carrito anónimo activo.
-    prisma.cart.update({ where: { id: cartId }, data: { estado: "activo" } }),
-  ]);
+    await tx.cart.update({ where: { id: cartId }, data: { estado: "activo" } });
+
+    return { limitado: excedido };
+  });
 
   return { cart: await getCartView(cartId), newCartToken, limitado };
 }
