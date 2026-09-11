@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
+import { multiplyMoney, sumMoney, moneyEquals } from "@el-tesoro/shared";
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { generateOpaqueToken, hashOpaqueToken } from "../utils/tokens";
+import { MAX_CANTIDAD } from "../validators/cart.validator";
 
 // Un carrito de invitado que lleva más de esto sin tocarse se trata como
 // caducado (se descarta y se empieza uno nuevo) — mismo plazo que la cookie
@@ -43,31 +45,45 @@ export interface CartItemView {
   imagen: string | null;
   atributos: { tipo: string; valor: string }[];
   cantidad: number;
-  precioUnitario: number;
+  // CAR-05: texto decimal fijo ("129.99"), igual que `ProductVariant.precio`
+  // — nunca number, para que la API no mezcle tipos de dinero entre
+  // endpoints. La aritmética real vive en shared/src/money.ts.
+  precioUnitario: string;
+  precioAnteriorCongelado: string | null;
   precioCambio: boolean;
   disponible: boolean;
   stockDisponible: number;
   stockLimitado: boolean;
-  subtotal: number;
+  subtotal: string;
 }
 
 export interface CartView {
   id: string | null;
   items: CartItemView[];
-  subtotal: number;
+  subtotal: string;
   totalUnidades: number;
 }
 
 function emptyCartView(): CartView {
-  return { id: null, items: [], subtotal: 0, totalUnidades: 0 };
+  return { id: null, items: [], subtotal: "0.00", totalUnidades: 0 };
 }
 
 function toCartView(cart: CartWithDetails): CartView {
   const items: CartItemView[] = cart.items.map((item) => {
-    const precioActual = Number(item.variant.precio);
-    const precioCongelado = Number(item.precioUnitarioCongelado);
+    const precioActual = item.variant.precio.toString();
+    const precioCongelado = item.precioUnitarioCongelado.toString();
     const stockDisponible = item.variant.inventory?.cantidadDisponible ?? 0;
     const disponible = item.variant.activo && item.variant.product.estado === "activo" && stockDisponible > 0;
+    const stockLimitado = item.cantidad > stockDisponible;
+    // CAR-06: si el stock cayó por debajo de lo que ya había en el carrito
+    // (otra compra se lo llevó mientras tanto), el subtotal solo cuenta las
+    // unidades que de verdad se pueden surtir — nunca las que superan el
+    // stock, aunque `cantidad` siga mostrando lo que el cliente pidió.
+    const cantidadFacturable = stockLimitado ? stockDisponible : item.cantidad;
+    // Comparado contra el precio congelado en el momento en que se agregó
+    // o se tocó por última vez esta línea — no contra el precio de hace un
+    // año, ver addItem/updateItemQuantity abajo.
+    const precioCambio = !moneyEquals(precioActual, precioCongelado);
 
     return {
       id: item.id,
@@ -82,18 +98,16 @@ function toCartView(cart: CartWithDetails): CartView {
       })),
       cantidad: item.cantidad,
       precioUnitario: precioActual,
-      // Comparado contra el precio congelado en el momento en que se agregó
-      // o se tocó por última vez esta línea — no contra el precio de hace un
-      // año, ver addItem/updateItemQuantity abajo.
-      precioCambio: precioActual !== precioCongelado,
+      precioAnteriorCongelado: precioCambio ? precioCongelado : null,
+      precioCambio,
       disponible,
       stockDisponible,
-      stockLimitado: item.cantidad > stockDisponible,
-      subtotal: precioActual * item.cantidad,
+      stockLimitado,
+      subtotal: multiplyMoney(precioActual, cantidadFacturable),
     };
   });
 
-  const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotal = sumMoney(items.map((item) => item.subtotal));
   const totalUnidades = items.reduce((sum, item) => sum + item.cantidad, 0);
 
   return { id: cart.id, items, subtotal, totalUnidades };
@@ -198,13 +212,24 @@ export async function addItem(ctx: CartContext, variantId: string, cantidad: num
   const { limitado } = await prisma.$transaction(async (tx) => {
     const upserted = await tx.cartItem.upsert({
       where: { cartId_variantId: { cartId, variantId } },
-      create: { cartId, variantId, cantidad: Math.min(cantidad, stockDisponible), precioUnitarioCongelado: variant.precio },
-      update: { cantidad: { increment: cantidad }, precioUnitarioCongelado: variant.precio },
+      create: { cartId, variantId, cantidad: Math.min(cantidad, stockDisponible, MAX_CANTIDAD), precioUnitarioCongelado: variant.precio },
+      // CAR-11: agregar más unidades a una línea que ya existía NO debe
+      // pisar en silencio el precio congelado — si el precio subió desde
+      // que se agregó por primera vez, el cliente merece ver el aviso
+      // "antes/ahora" en el carrito antes de que desaparezca solo. Solo se
+      // actualiza al crear la línea, o explícitamente vía
+      // `acknowledgePriceChange` (botón "Entendido").
+      update: { cantidad: { increment: cantidad } },
     });
 
-    const excedido = upserted.cantidad > stockDisponible;
+    // CAR-12: cada request individual ya respeta el tope de MAX_CANTIDAD
+    // (validador), pero varios "Agregar" seguidos a la misma línea suman
+    // sobre `cantidad` vía `increment` sin que ninguno vea el total del
+    // otro — el tope hay que aplicarlo aquí también, no solo en la entrada.
+    const tope = Math.min(stockDisponible, MAX_CANTIDAD);
+    const excedido = upserted.cantidad > tope;
     if (excedido) {
-      await tx.cartItem.update({ where: { id: upserted.id }, data: { cantidad: stockDisponible } });
+      await tx.cartItem.update({ where: { id: upserted.id }, data: { cantidad: tope } });
     }
 
     // Toca `updatedAt` del carrito para reiniciar el conteo de caducidad de
@@ -227,7 +252,7 @@ async function findOwnedItem(cartId: string, itemId: string) {
   return item;
 }
 
-export async function updateItemQuantity(ctx: CartContext, itemId: string, cantidad: number): Promise<CartView> {
+export async function updateItemQuantity(ctx: CartContext, itemId: string, cantidad: number): Promise<{ cart: CartView; limitado: boolean }> {
   const cartId = await findCartId(ctx);
   if (!cartId) throw AppError.notFound("CART_ITEM_NOT_FOUND", "No existe esa línea en el carrito.");
 
@@ -239,15 +264,39 @@ export async function updateItemQuantity(ctx: CartContext, itemId: string, canti
     throw AppError.badRequest("OUT_OF_STOCK", "Ya no hay stock disponible de este producto — elimínalo del carrito.");
   }
 
+  // CAR-03: la ficha de producto y el carrito necesitan saber si lo pedido
+  // no cabía en el stock para mostrar un aviso — antes este endpoint
+  // recortaba en silencio igual que `addItem`, pero nunca lo informaba.
   const cantidadFinal = Math.min(cantidad, stockDisponible);
+  const limitado = cantidadFinal < cantidad;
 
+  // CAR-11: cambiar la cantidad (+/-) tampoco debe pisar en silencio el
+  // precio congelado — ver nota en `addItem`.
   await prisma.$transaction([
     prisma.cartItem.update({
       where: { id: itemId },
-      data: { cantidad: cantidadFinal, precioUnitarioCongelado: variant.precio },
+      data: { cantidad: cantidadFinal },
     }),
     prisma.cart.update({ where: { id: cartId }, data: { estado: "activo" } }),
   ]);
+
+  return { cart: await getCartView(cartId), limitado };
+}
+
+/// CAR-11: acción explícita del botón "Entendido" en el aviso de cambio de
+/// precio — el cliente ya vio "antes Q X, ahora Q Y" y acepta el precio
+/// actual como el nuevo congelado. No toca la cantidad.
+export async function acknowledgePriceChange(ctx: CartContext, itemId: string): Promise<CartView> {
+  const cartId = await findCartId(ctx);
+  if (!cartId) throw AppError.notFound("CART_ITEM_NOT_FOUND", "No existe esa línea en el carrito.");
+
+  const item = await findOwnedItem(cartId, itemId);
+  const variant = await getVariantForCart(item.variantId);
+
+  await prisma.cartItem.update({
+    where: { id: itemId },
+    data: { precioUnitarioCongelado: variant.precio },
+  });
 
   return getCartView(cartId);
 }

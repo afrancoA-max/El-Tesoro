@@ -31,7 +31,16 @@ export async function addCartItemController(req: Request, res: Response, next: N
 export async function updateCartItemController(req: Request, res: Response, next: NextFunction) {
   try {
     const input = updateCartItemSchema.parse(req.body);
-    const cart = await cartService.updateItemQuantity(contextOf(req), req.params.id, input.cantidad);
+    const { cart, limitado } = await cartService.updateItemQuantity(contextOf(req), req.params.id, input.cantidad);
+    res.json({ success: true, data: { cart, limitado } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function acknowledgePriceChangeController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const cart = await cartService.acknowledgePriceChange(contextOf(req), req.params.id);
     res.json({ success: true, data: { cart } });
   } catch (error) {
     next(error);

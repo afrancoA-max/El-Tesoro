@@ -3,6 +3,7 @@ import {
   getCartController,
   addCartItemController,
   updateCartItemController,
+  acknowledgePriceChangeController,
   deleteCartItemController,
   mergeCartController,
 } from "../../controllers/cart.controller";
@@ -19,6 +20,7 @@ cartRouter.use(optionalAuth);
 cartRouter.get("/", getCartController);
 cartRouter.post("/items", addCartItemController);
 cartRouter.patch("/items/:id", updateCartItemController);
+cartRouter.post("/items/:id/acknowledge-price", acknowledgePriceChangeController);
 cartRouter.delete("/items/:id", deleteCartItemController);
 
 // Fusionar el carrito anónimo con el de la cuenta sí exige sesión iniciada

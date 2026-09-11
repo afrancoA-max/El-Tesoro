@@ -209,6 +209,9 @@ export async function getProductBySlug(slug: string) {
       precioComparativo: v.precioComparativo,
       activo: v.activo,
       disponible: (v.inventory?.cantidadDisponible ?? 0) > 0,
+      // CAR-03: la ficha necesita el stock real (no solo el booleano
+      // `disponible`) para el selector de cantidad de 1 a min(stock, 99).
+      stockDisponible: v.inventory?.cantidadDisponible ?? 0,
       atributos: v.atributos.map((a) => ({
         tipo: a.attributeValue.attributeType.nombre,
         valor: a.attributeValue.valor,
