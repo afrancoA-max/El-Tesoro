@@ -1,7 +1,15 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import { Prisma } from "@prisma/client";
 import { AppError } from "../utils/AppError";
 import { logger } from "../config/logger";
+
+/// SEG-06: body-parser (express.json()) lanza un SyntaxError con esta forma
+/// cuando el cuerpo de la petición no es JSON válido — antes caía al 500
+/// genérico de abajo, aunque el error es del cliente, no del servidor.
+function isJsonParseError(error: unknown): boolean {
+  return error instanceof SyntaxError && (error as SyntaxError & { type?: string }).type === "entity.parse.failed";
+}
 
 export function errorHandlerMiddleware(
   error: unknown,
@@ -26,6 +34,34 @@ export function errorHandlerMiddleware(
       },
     });
     return;
+  }
+
+  if (isJsonParseError(error)) {
+    res.status(400).json({
+      success: false,
+      error: { code: "INVALID_JSON", message: "El cuerpo de la petición no es JSON válido." },
+    });
+    return;
+  }
+
+  // SEG-06: P2002 (violación de unicidad, ej. doble registro simultáneo o
+  // carrito duplicado — ver CAR-09) y P2025 (registro no encontrado) son
+  // errores del cliente, no fallas del servidor.
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      res.status(409).json({
+        success: false,
+        error: { code: "DUPLICATE", message: "Ya existe un registro con esos datos." },
+      });
+      return;
+    }
+    if (error.code === "P2025") {
+      res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "El registro no existe." },
+      });
+      return;
+    }
   }
 
   logger.error({ err: error }, "Error no controlado");
