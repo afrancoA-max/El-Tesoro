@@ -7,6 +7,7 @@ import { AuthCard } from "@/components/account/AuthCard";
 import { Input, Button, Toast } from "@/components/ui";
 import { useUser } from "@/context/UserContext";
 import { ApiError } from "@/services/api";
+import { safeRedirectPath } from "@/lib/safeRedirect";
 import formStyles from "@/components/account/Form.module.css";
 
 function LoginForm() {
@@ -24,7 +25,7 @@ function LoginForm() {
     setSubmitting(true);
     try {
       await login({ email, password });
-      router.push(searchParams.get("next") || "/cuenta/perfil");
+      router.push(safeRedirectPath(searchParams.get("next"), "/cuenta/perfil"));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No pudimos iniciar sesión. Intenta de nuevo.");
     } finally {
