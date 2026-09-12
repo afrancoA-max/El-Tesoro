@@ -115,6 +115,13 @@ export default function RegistroPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <Toast variant="error" message={error} />}
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
+          Al crear tu cuenta, aceptas nuestra{" "}
+          <Link href="/privacidad" style={{ textDecoration: "underline" }}>
+            Política de privacidad
+          </Link>
+          .
+        </p>
         <Button type="submit" disabled={submitting} style={{ width: "100%", marginTop: 8 }}>
           {submitting ? "Creando cuenta…" : "Crear cuenta"}
         </Button>

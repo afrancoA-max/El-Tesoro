@@ -35,23 +35,26 @@ export function Footer({ categoryTree }: FooterProps) {
           </div>
           <div>
             <p className={styles.columnTitle}>Ayuda</p>
-            <a className={styles.link} href="#">
+            <a className={styles.link} href="/envios">
               Envíos
             </a>
-            <a className={styles.link} href="#">
+            <a className={styles.link} href="/devoluciones">
               Devoluciones
             </a>
-            <a className={styles.link} href="#">
+            <a className={styles.link} href="/contacto">
               Contacto
             </a>
           </div>
           <div>
             <p className={styles.columnTitle}>Nosotros</p>
-            <a className={styles.link} href="#">
+            <a className={styles.link} href="/sobre-nosotros">
               Sobre El Tesoro
             </a>
-            <a className={styles.link} href="#">
+            <a className={styles.link} href="/mayorista">
               Portal mayorista
+            </a>
+            <a className={styles.link} href="/privacidad">
+              Política de privacidad
             </a>
           </div>
         </div>

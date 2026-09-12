@@ -1,0 +1,38 @@
+.main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-4) var(--space-16);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--space-6);
+}
+
+.draft {
+  margin-bottom: var(--space-8);
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+.prose h2 {
+  font-size: var(--font-size-lg);
+  margin-top: var(--space-6);
+}
+
+.prose a {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
+.prose a:hover,
+.prose a:focus-visible {
+  color: var(--color-navy-hover);
+}

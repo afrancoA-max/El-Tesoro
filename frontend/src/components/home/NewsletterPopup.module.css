@@ -87,6 +87,11 @@
   margin: var(--space-4) 0 0;
 }
 
+.legal a {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
 .successState {
   display: flex;
   flex-direction: column;

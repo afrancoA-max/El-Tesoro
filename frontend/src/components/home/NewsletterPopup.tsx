@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, FormEvent } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Input, Button, Toast } from "@/components/ui";
 import { subscribeToNewsletter } from "@/services/newsletterApi";
 import { ApiError } from "@/services/api";
@@ -144,7 +145,8 @@ export function NewsletterPopup({ images = [] }: NewsletterPopupProps) {
                 </Button>
               </form>
               <p className={styles.legal}>
-                Al suscribirte, estás de acuerdo con recibir correos promocionales. Puedes darte de baja cuando quieras.
+                Al suscribirte, estás de acuerdo con recibir correos promocionales y con nuestra{" "}
+                <Link href="/privacidad">Política de privacidad</Link>. Puedes darte de baja cuando quieras.
               </p>
             </>
           )}
