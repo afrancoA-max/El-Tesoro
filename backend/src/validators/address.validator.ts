@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isDepartamentoValido, isMunicipioValido } from "@el-tesoro/shared";
+import { isDepartamentoValido, isMunicipioValido, isTelefonoGtValido, normalizeTelefonoGt } from "@el-tesoro/shared";
 
 export const addressSchema = z
   .object({
@@ -8,7 +8,8 @@ export const addressSchema = z
     telefono: z
       .string()
       .trim()
-      .regex(/^(\+502)?\d{8}$/, "Teléfono inválido. Usa 8 dígitos, ej. 5512-3456."),
+      .refine(isTelefonoGtValido, "Teléfono inválido. Usa 8 dígitos, ej. 5512-3456.")
+      .transform(normalizeTelefonoGt),
     departamento: z.string().trim().refine(isDepartamentoValido, "Departamento no válido."),
     municipio: z.string().trim(),
     direccion: z.string().trim().min(5, "La dirección debe tener al menos 5 caracteres.").max(300),

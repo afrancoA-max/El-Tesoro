@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { normalizeTelefonoGt } from "@el-tesoro/shared";
 import { ProtectedRoute } from "@/components/account/ProtectedRoute";
 import { AccountShell } from "@/components/account/AccountShell";
 import { Input, Button, Toast } from "@/components/ui";
@@ -26,7 +27,7 @@ function PerfilForm() {
     setSuccess(false);
     setSubmitting(true);
     try {
-      await updateProfile({ nombre, telefono, nit });
+      await updateProfile({ nombre, telefono: telefono ? normalizeTelefonoGt(telefono) : telefono, nit });
       await refresh();
       setSuccess(true);
     } catch (err) {

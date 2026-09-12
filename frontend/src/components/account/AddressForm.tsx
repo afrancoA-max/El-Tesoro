@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, FormEvent, CSSProperties } from "react";
-import { Address, DEPARTAMENTOS_GT } from "@el-tesoro/shared";
+import { Address, DEPARTAMENTOS_GT, normalizeTelefonoGt } from "@el-tesoro/shared";
 import { Input, Button, Toast } from "@/components/ui";
 import { AddressInput } from "@/services/accountApi";
 import { ApiError } from "@/services/api";
@@ -43,7 +43,7 @@ export function AddressForm({ initial, onSubmit, onCancel }: AddressFormProps) {
       await onSubmit({
         alias: alias || undefined,
         nombreDestinatario,
-        telefono,
+        telefono: normalizeTelefonoGt(telefono),
         departamento,
         municipio,
         direccion,

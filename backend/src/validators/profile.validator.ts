@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { isTelefonoGtValido, normalizeTelefonoGt } from "@el-tesoro/shared";
 import { isNitValido, normalizeNit } from "../utils/nit";
 
 const telefonoGtSchema = z
   .string()
   .trim()
-  .regex(/^(\+502)?\d{8}$/, "Teléfono inválido. Usa 8 dígitos, ej. 5512-3456.");
+  .refine(isTelefonoGtValido, "Teléfono inválido. Usa 8 dígitos, ej. 5512-3456.")
+  .transform(normalizeTelefonoGt);
 
 export const updateProfileSchema = z.object({
   nombre: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres.").max(120).optional(),
