@@ -1,7 +1,7 @@
 import styles from "./TrustBadges.module.css";
 
 const BADGES = [
-  { title: "Envíos a todo Guatemala", description: "Coordinamos entrega según tu ubicación." },
+  { title: "Envíos coordinados", description: "Coordinamos la entrega de tu pedido según tu ubicación." },
   { title: "Calidad garantizada", description: "Productos seleccionados para uso diario en el hogar." },
   { title: "Atención directa", description: "Te ayudamos a elegir el producto correcto para tu cocina." },
 ];
