@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import supertest from "supertest";
-import { app } from "./helpers/app";
+import { createTestApp } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
+
+// App nueva por test — ver helpers/app.ts.
+let app: ReturnType<typeof createTestApp>;
 
 beforeEach(async () => {
   await resetDb();
+  app = createTestApp();
 });
 
 afterAll(async () => {

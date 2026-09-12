@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import supertest from "supertest";
-import { app } from "./helpers/app";
+import { createTestApp } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
 
 const CREDENTIALS = { nombre: "Cliente de prueba", email: "cliente@example.com", password: "clave1234" };
 
+let app: ReturnType<typeof createTestApp>;
+
 beforeEach(async () => {
   await resetDb();
+  app = createTestApp();
 });
 
 afterAll(async () => {
@@ -34,7 +37,8 @@ describe("POST /api/auth/register", () => {
 
 describe("POST /api/auth/login", () => {
   beforeEach(async () => {
-    await supertest(app).post("/api/auth/register").send(CREDENTIALS);
+    const res = await supertest(app).post("/api/auth/register").send(CREDENTIALS);
+    expect(res.status).toBe(201);
   });
 
   it("inicia sesión con credenciales válidas y pone las cookies", async () => {
@@ -61,8 +65,10 @@ describe("POST /api/auth/login", () => {
 describe("Sesión: refresh y /me", () => {
   it("refresca la sesión con el refresh token de la cookie y rota el token", async () => {
     const agent = supertest.agent(app);
-    await agent.post("/api/auth/register").send(CREDENTIALS);
-    await agent.post("/api/auth/login").send({ email: CREDENTIALS.email, password: CREDENTIALS.password });
+    const registered = await agent.post("/api/auth/register").send(CREDENTIALS);
+    expect(registered.status).toBe(201);
+    const loggedIn = await agent.post("/api/auth/login").send({ email: CREDENTIALS.email, password: CREDENTIALS.password });
+    expect(loggedIn.status).toBe(200);
 
     const me = await agent.get("/api/auth/me");
     expect(me.status).toBe(200);

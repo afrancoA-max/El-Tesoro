@@ -1,11 +1,17 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import supertest from "supertest";
-import { app } from "./helpers/app";
+import { createTestApp } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
 import { createSellableVariant } from "./helpers/factories";
 
+// App nueva por test — ver helpers/app.ts (los rate limiters de auth son en
+// memoria por instancia y varias pruebas de este archivo registran/inician
+// sesión).
+let app: ReturnType<typeof createTestApp>;
+
 beforeEach(async () => {
   await resetDb();
+  app = createTestApp();
 });
 
 afterAll(async () => {
