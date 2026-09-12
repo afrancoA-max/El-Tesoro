@@ -22,8 +22,9 @@ env:
   # Docker puede alojar imágenes de distintos servicios sin conflicto.
   REPOSITORY: eltesoro-backend
   API_URL: https://eltesoro-backend-staging-472679541597.us-central1.run.app/api
-  # Sin el sufijo /api (a diferencia de API_URL): next.config.ts le agrega
-  # /api/:path* al armar el destino del rewrite.
+  # Sin el sufijo /api (a diferencia de API_URL): el proxy same-origin
+  # (frontend/src/app/api/[...path]/route.ts, no un rewrite de Next) le
+  # agrega /api/<path> al armar el destino de cada request.
   API_ORIGIN: https://eltesoro-backend-staging-472679541597.us-central1.run.app
   SITE_URL: https://eltesoro-frontend-staging-472679541597.us-central1.run.app
   WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
@@ -32,9 +33,25 @@ env:
 permissions:
   contents: read
   id-token: write
+  checks: read
 
 jobs:
+  # INF-03: ver el mismo job en deploy-staging.yml — sin esto, este
+  # despliegue corría en paralelo con el CI en vez de esperarlo.
+  wait-for-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esperar a que el CI termine en verde
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: "lint-and-build"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success
+
   deploy:
+    needs: wait-for-ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +98,7 @@ jobs:
             --port=8080 \
             --set-env-vars="API_PROXY_TARGET=${{ env.API_ORIGIN }}" \
             --set-secrets=INTERNAL_PROXY_SECRET=eltesoro-internal-proxy-secret:latest \
-            --min-instances=1 --max-instances=3 --memory=512Mi \
+            --min-instances=0 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 
       - name: URL del servicio

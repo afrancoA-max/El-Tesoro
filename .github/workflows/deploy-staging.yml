@@ -30,9 +30,26 @@ env:
 permissions:
   contents: read
   id-token: write
+  checks: read
 
 jobs:
+  # INF-03: sin esto, un push a main dispara este despliegue en paralelo con
+  # el CI (lint/build/prisma validate) — código roto podía llegar a staging,
+  # y las migraciones de Prisma corrían antes de saber si el build compilaba.
+  wait-for-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esperar a que el CI termine en verde
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: "lint-and-build"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success
+
   deploy:
+    needs: wait-for-ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +112,7 @@ jobs:
             --add-cloudsql-instances=${{ env.SQL_CONNECTION_NAME }} \
             --set-secrets=DATABASE_URL=eltesoro-staging-database-url:latest,JWT_ACCESS_SECRET=eltesoro-jwt-access-secret:latest,BREVO_API_KEY=eltesoro-brevo-api-key:latest,INTERNAL_PROXY_SECRET=eltesoro-internal-proxy-secret:latest \
             --set-env-vars="NODE_ENV=production,CORS_ORIGINS=${{ env.FRONTEND_URL }},FRONTEND_URL=${{ env.FRONTEND_URL }},EMAIL_FROM=${{ env.EMAIL_FROM }},EMAIL_FROM_NAME=${{ env.EMAIL_FROM_NAME }}" \
-            --min-instances=1 --max-instances=3 --memory=512Mi \
+            --min-instances=0 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
 
       - name: URL del servicio
