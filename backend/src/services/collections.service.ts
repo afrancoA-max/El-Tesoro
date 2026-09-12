@@ -33,6 +33,9 @@ export async function listCollectionProducts(slug: string, pagination: Paginatio
           },
         },
       },
+      // CAT-10: sin orderBy, Postgres no garantiza el mismo orden entre
+      // páginas — productos podían repetirse o saltarse al paginar.
+      orderBy: [{ product: { createdAt: "desc" } }, { productId: "asc" }],
       skip: pagination.skip,
       take: pagination.limit,
     }),
