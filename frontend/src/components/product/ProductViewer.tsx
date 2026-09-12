@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ProductDetail, ProductVariant } from "@/lib/api-types";
 import { formatCurrency } from "@/lib/format";
 import { Badge, Button, FavoriteButton } from "@/components/ui";
@@ -97,11 +97,15 @@ export function ProductViewer({ product }: ProductViewerProps) {
 
   // Si cambia la variante activa (otra combinación de atributos), la
   // cantidad elegida vuelve a 1 en vez de arrastrar un número que podía
-  // superar el stock de la variante anterior.
-  useEffect(() => {
+  // superar el stock de la variante anterior. Ajuste de estado durante el
+  // render (no en un efecto): React re-renderiza antes de pintar, así que
+  // no hay parpadeo, y evita el "cascading render" de un setState en efecto.
+  const [lastVariantId, setLastVariantId] = useState(activeVariant?.id);
+  if (activeVariant?.id !== lastVariantId) {
+    setLastVariantId(activeVariant?.id);
     setCantidad(1);
     setAddNotice(null);
-  }, [activeVariant?.id]);
+  }
 
   const handleSelectAttribute = (tipo: string, valor: string) => {
     setSelection((prev) => resolveSelection(product.variantes, prev, tipo, valor));
