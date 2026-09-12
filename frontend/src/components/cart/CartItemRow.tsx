@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CartItem } from "@el-tesoro/shared";
 import { formatCurrency } from "@/lib/format";
 import { ApiError } from "@/services/api";
+import { QuantityStepper } from "@/components/ui";
 import styles from "./CartItemRow.module.css";
 
 // Mismo tope que `backend/src/validators/cart.validator.ts` (MAX_CANTIDAD) —
@@ -26,6 +27,10 @@ export function CartItemRow({ item, onQuantityChange, onAcknowledgePriceChange, 
   // CAR-07: antes `changeQuantity`/`remove` no tenían `catch` — si la API
   // fallaba, la promesa se rechazaba sin que el cliente viera nada.
   const [rowError, setRowError] = useState<string | null>(null);
+  // Distinto de `rowError`: esto alimenta el popup del QuantityStepper (un
+  // Toast, no un <p>) cuando el servidor recorta la cantidad por falta de
+  // stock — `rowError` sigue siendo para fallos reales de la API.
+  const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [priceNoticeDismissed, setPriceNoticeDismissed] = useState(false);
 
   const changeQuantity = async (next: number) => {
@@ -35,7 +40,9 @@ export function CartItemRow({ item, onQuantityChange, onAcknowledgePriceChange, 
     try {
       const { limitado } = await onQuantityChange(item.id, next);
       if (limitado) {
-        setRowError(`Solo hay ${item.stockDisponible} disponibles; ajustamos la cantidad.`);
+        setLimitNotice(
+          item.stockDisponible <= 1 ? "Solo hay 1 disponible." : `Solo hay ${item.stockDisponible} disponibles.`,
+        );
       }
     } catch (error) {
       setRowError(error instanceof ApiError ? error.message : "No se pudo actualizar la cantidad.");
@@ -108,29 +115,15 @@ export function CartItemRow({ item, onQuantityChange, onAcknowledgePriceChange, 
         {rowError && <p className={styles.warning}>{rowError}</p>}
 
         <div className={styles.controls}>
-          <div className={styles.stepper}>
-            <button
-              type="button"
-              className={styles.stepButton}
-              onClick={() => changeQuantity(item.cantidad - 1)}
-              disabled={busy || item.cantidad <= 1}
-              aria-label="Reducir cantidad"
-            >
-              −
-            </button>
-            <span className={styles.quantity} aria-live="polite">
-              {item.cantidad}
-            </span>
-            <button
-              type="button"
-              className={styles.stepButton}
-              onClick={() => changeQuantity(item.cantidad + 1)}
-              disabled={busy || item.cantidad >= Math.min(item.stockDisponible, MAX_CANTIDAD_POR_LINEA)}
-              aria-label="Aumentar cantidad"
-            >
-              +
-            </button>
-          </div>
+          <QuantityStepper
+            value={item.cantidad}
+            max={Math.min(item.stockDisponible, MAX_CANTIDAD_POR_LINEA)}
+            disabled={busy}
+            onChange={changeQuantity}
+            externalNotice={limitNotice}
+            size="sm"
+            label={`Cantidad de ${item.nombre}`}
+          />
           <button type="button" className={styles.removeButton} onClick={remove} disabled={busy}>
             Eliminar
           </button>

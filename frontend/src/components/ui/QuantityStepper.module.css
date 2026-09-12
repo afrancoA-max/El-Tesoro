@@ -1,0 +1,86 @@
+.wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.stepButton {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+.stepButton:disabled {
+  color: var(--color-border-strong);
+  cursor: not-allowed;
+}
+
+.stepButton:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+}
+
+.input {
+  width: 44px;
+  min-width: 0;
+  height: 36px;
+  border: none;
+  border-left: 1px solid var(--color-border-strong);
+  border-right: 1px solid var(--color-border-strong);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: transparent;
+  /* Quita las flechitas nativas del input number — ya tenemos los botones
+     +/- propios, duplicarlas confunde más de lo que ayuda. */
+  -moz-appearance: textfield;
+}
+
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input:disabled {
+  color: var(--color-border-strong);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.sm .stepButton {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-size-sm);
+}
+
+.sm .input {
+  width: 36px;
+  height: 28px;
+  font-size: var(--font-size-xs);
+}
+
+.popup {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 20;
+  white-space: nowrap;
+}

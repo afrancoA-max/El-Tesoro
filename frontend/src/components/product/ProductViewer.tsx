@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ProductDetail, ProductVariant } from "@/lib/api-types";
 import { formatCurrency } from "@/lib/format";
-import { Badge, Button, FavoriteButton } from "@/components/ui";
+import { Badge, Button, FavoriteButton, QuantityStepper, Toast } from "@/components/ui";
 import { useCart } from "@/context/CartContext";
 import { ApiError } from "@/services/api";
 import { ProductGallery } from "./ProductGallery";
@@ -184,32 +184,12 @@ export function ProductViewer({ product }: ProductViewerProps) {
         {activeVariant && disponible && (
           <div className={styles.quantityRow}>
             <span className={styles.quantityLabel}>Cantidad</span>
-            <div className={styles.stepper}>
-              <button
-                type="button"
-                className={styles.stepButton}
-                onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-                disabled={cantidad <= 1}
-                aria-label="Reducir cantidad"
-              >
-                −
-              </button>
-              <span className={styles.quantityValue} aria-live="polite">
-                {cantidad}
-              </span>
-              <button
-                type="button"
-                className={styles.stepButton}
-                onClick={() => setCantidad((c) => Math.min(maxCantidad, c + 1))}
-                disabled={cantidad >= maxCantidad}
-                aria-label="Aumentar cantidad"
-              >
-                +
-              </button>
-            </div>
-            {cantidad >= maxCantidad && (
-              <span className={styles.quantityMaxNote}>Llegaste al máximo disponible ({maxCantidad}).</span>
-            )}
+            <QuantityStepper
+              value={cantidad}
+              max={maxCantidad}
+              onChange={setCantidad}
+              label={`Cantidad de ${product.nombre}`}
+            />
           </div>
         )}
 
@@ -233,8 +213,16 @@ export function ProductViewer({ product }: ProductViewerProps) {
             }}
           />
         </div>
-        {addError && <p className={styles.ctaError}>{addError}</p>}
-        {addNotice && <p className={styles.ctaNotice}>{addNotice}</p>}
+        {addError && (
+          <div className={styles.ctaFeedback}>
+            <Toast variant="error" message={addError} />
+          </div>
+        )}
+        {addNotice && (
+          <div className={styles.ctaFeedback}>
+            <Toast variant="info" message={addNotice} />
+          </div>
+        )}
 
         {product.especificaciones && Object.keys(product.especificaciones).length > 0 && (
           <div className={styles.specsBlock}>

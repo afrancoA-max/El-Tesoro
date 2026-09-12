@@ -131,49 +131,6 @@
   color: var(--color-text-secondary);
 }
 
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  width: fit-content;
-}
-
-.stepButton {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-}
-
-.stepButton:disabled {
-  color: var(--color-border-strong);
-  cursor: not-allowed;
-}
-
-.stepButton:hover:not(:disabled) {
-  background: var(--color-bg-alt);
-}
-
-.quantityValue {
-  min-width: 36px;
-  text-align: center;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.quantityMaxNote {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
 .ctaRow {
   display: flex;
   align-items: center;
@@ -183,17 +140,9 @@
   bottom: var(--space-4);
 }
 
-.ctaError {
-  font-size: var(--font-size-sm);
-  color: var(--color-danger);
+.ctaFeedback {
   margin-top: var(--space-2);
-}
-
-.ctaNotice {
-  font-size: var(--font-size-sm);
-  color: var(--color-gold-hover);
-  font-weight: 600;
-  margin-top: var(--space-2);
+  width: fit-content;
 }
 
 .specsBlock {

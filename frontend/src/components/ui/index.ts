@@ -6,3 +6,4 @@ export * from "./Modal";
 export * from "./Toast";
 export * from "./Skeleton";
 export * from "./FavoriteButton";
+export * from "./QuantityStepper";
