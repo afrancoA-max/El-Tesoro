@@ -31,6 +31,17 @@ function ipKeyGeneratorFor(req: Request): string {
   return resolveClientIp(req);
 }
 
+// INF-04: estos limiters son singletons de módulo (su contador vive en
+// memoria mientras dure el proceso) — en las pruebas de integración, todas
+// las requests salen de la misma IP y varias pruebas legítimas y sin
+// relación entre sí registran/inician sesión más veces de las que el límite
+// real permite. Desactivarlo solo bajo NODE_ENV=test dentro de esta función
+// exportada (nunca en producción ni en desarrollo) evita que las pruebas se
+// bloqueen entre sí sin tocar el comportamiento que sí importa proteger.
+function skipInTests(): boolean {
+  return env.nodeEnv === "test";
+}
+
 /// Limita intentos por IP en rutas sensibles (checklist del módulo 04:
 /// "los intentos de login fallidos se limitan"). En memoria: suficiente
 /// para una sola instancia; si el backend escala horizontalmente, migrar
@@ -39,6 +50,7 @@ export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   standardHeaders: true,
+  skip: skipInTests,
   legacyHeaders: false,
   keyGenerator: ipKeyGeneratorFor,
   message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
@@ -51,6 +63,7 @@ export const loginEmailRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: true,
+  skip: skipInTests,
   legacyHeaders: false,
   keyGenerator: (req) => {
     const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
@@ -63,6 +76,7 @@ export const registerRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: true,
+  skip: skipInTests,
   legacyHeaders: false,
   keyGenerator: ipKeyGeneratorFor,
   message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
@@ -72,6 +86,7 @@ export const newsletterRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: true,
+  skip: skipInTests,
   legacyHeaders: false,
   keyGenerator: ipKeyGeneratorFor,
   message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
@@ -81,6 +96,7 @@ export const passwordResetRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: true,
+  skip: skipInTests,
   legacyHeaders: false,
   keyGenerator: ipKeyGeneratorFor,
   message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
