@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { formatCurrency } from "@/lib/format";
-import { Button } from "@/components/ui";
+import { LinkButton } from "@/components/ui";
 import { EmptyState } from "@/components/catalog/EmptyState";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import styles from "./page.module.css";
@@ -26,11 +25,9 @@ export function CartPageView() {
           title="Tu carrito está vacío"
           description="Explora el catálogo y agrega lo que necesites para tu cocina o tu hogar."
           action={
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                Ver categorías destacadas
-              </Button>
-            </Link>
+            <LinkButton href="/" variant="outline" size="sm">
+              Ver categorías destacadas
+            </LinkButton>
           }
         />
       )}
@@ -60,11 +57,9 @@ export function CartPageView() {
               <span>Subtotal</span>
               <span className={styles.totalValue}>{formatCurrency(cart.subtotal)}</span>
             </div>
-            <Link href="/checkout">
-              <Button variant="primary" size="md" className={styles.checkoutButton}>
-                Proceder al checkout
-              </Button>
-            </Link>
+            <LinkButton href="/checkout" variant="primary" size="md" className={styles.checkoutButton}>
+              Proceder al checkout
+            </LinkButton>
           </aside>
         </div>
       )}

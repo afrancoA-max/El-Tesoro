@@ -10,7 +10,7 @@
 }
 
 .card:hover,
-.card:focus-visible {
+.card:focus-within {
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
 }
@@ -22,6 +22,26 @@
      cada lugar. Ver recomendación de fotografía en docs/plan/03. */
   aspect-ratio: 1 / 1;
   background: var(--color-bg-alt);
+}
+
+/* CAT-08: el enlace a la ficha cubre solo la imagen (y, más abajo, el
+   nombre) — el favorito y "agregar" quedan fuera del <a> para no anidar
+   controles interactivos dentro de un enlace. */
+.imageLink {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.imageLink:focus-visible {
+  outline: 2px solid var(--color-focus, currentColor);
+  outline-offset: -2px;
+}
+
+.nameLink {
+  color: inherit;
+  text-decoration: none;
 }
 
 .image {

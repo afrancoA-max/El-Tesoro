@@ -3,8 +3,7 @@
 import { ProtectedRoute } from "@/components/account/ProtectedRoute";
 import { AccountShell } from "@/components/account/AccountShell";
 import { EmptyState } from "@/components/catalog/EmptyState";
-import { Button } from "@/components/ui";
-import Link from "next/link";
+import { LinkButton } from "@/components/ui";
 
 // Estructura y página listas mostrando el estado vacío (checklist del
 // Módulo 04). El listado real de pedidos llega con el Módulo 06 —
@@ -17,11 +16,9 @@ function PedidosContent() {
         title="Todavía no tienes pedidos"
         description="Cuando compres en Almacén El Tesoro, tu historial aparecerá aquí."
         action={
-          <Link href="/">
-            <Button variant="outline" size="sm">
-              Ir al catálogo
-            </Button>
-          </Link>
+          <LinkButton href="/" variant="outline" size="sm">
+            Ir al catálogo
+          </LinkButton>
         }
       />
     </AccountShell>

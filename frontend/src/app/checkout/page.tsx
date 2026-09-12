@@ -1,8 +1,7 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { EmptyState } from "@/components/catalog/EmptyState";
-import { Button } from "@/components/ui";
+import { LinkButton } from "@/components/ui";
 import styles from "./page.module.css";
 
 // Pantalla "próximamente" interna (docs/plan/05-carrito.md, sección 2): el
@@ -21,11 +20,9 @@ export default function CheckoutPage() {
         title="El checkout llega pronto"
         description="Estamos construyendo el pago en línea. Por ahora puedes seguir agregando productos a tu carrito — se guardará para cuando esté listo."
         action={
-          <Link href="/carrito">
-            <Button variant="outline" size="sm">
-              Volver al carrito
-            </Button>
-          </Link>
+          <LinkButton href="/carrito" variant="outline" size="sm">
+            Volver al carrito
+          </LinkButton>
         }
       />
     </main>

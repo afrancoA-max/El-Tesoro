@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { formatCurrency } from "@/lib/format";
-import { Button } from "@/components/ui";
+import { LinkButton } from "@/components/ui";
 import { CartItemRow } from "./CartItemRow";
 import styles from "./CartDrawer.module.css";
 
@@ -47,11 +47,9 @@ export function CartDrawer() {
         {cart.items.length === 0 ? (
           <div className={styles.empty}>
             <p>Tu carrito está vacío.</p>
-            <Link href="/" onClick={closeDrawer}>
-              <Button variant="outline" size="sm">
-                Ver categorías destacadas
-              </Button>
-            </Link>
+            <LinkButton href="/" onClick={closeDrawer} variant="outline" size="sm">
+              Ver categorías destacadas
+            </LinkButton>
           </div>
         ) : (
           <>
@@ -77,11 +75,15 @@ export function CartDrawer() {
               <Link href="/carrito" onClick={closeDrawer} className={styles.viewCartLink}>
                 Ver carrito completo
               </Link>
-              <Link href="/checkout" onClick={closeDrawer}>
-                <Button variant="primary" size="md" className={styles.checkoutButton}>
-                  Proceder al checkout
-                </Button>
-              </Link>
+              <LinkButton
+                href="/checkout"
+                onClick={closeDrawer}
+                variant="primary"
+                size="md"
+                className={styles.checkoutButton}
+              >
+                Proceder al checkout
+              </LinkButton>
             </div>
           </>
         )}
