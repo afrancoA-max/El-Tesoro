@@ -12,9 +12,12 @@ export interface CategoryNode {
 }
 
 export async function getCategoryTree(): Promise<CategoryNode[]> {
-  const categories = await prisma.category.findMany({
-    orderBy: { orden: "asc" },
-  });
+  const [categories, productCounts] = await Promise.all([
+    prisma.category.findMany({ orderBy: { orden: "asc" } }),
+    prisma.product.groupBy({ by: ["categoriaId"], where: { estado: "activo" }, _count: true }),
+  ]);
+
+  const ownCountByCategory = new Map<string, number>(productCounts.map((c) => [c.categoriaId, c._count]));
 
   const nodesById = new Map<string, CategoryNode>(
     categories.map((category) => [
@@ -32,17 +35,36 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   );
 
   const roots: CategoryNode[] = [];
+  const childrenByParent = new Map<string, string[]>();
   for (const category of categories) {
     const node = nodesById.get(category.id);
     if (!node) continue;
     if (category.parentId && nodesById.has(category.parentId)) {
       nodesById.get(category.parentId)!.children.push(node);
+      const siblings = childrenByParent.get(category.parentId) ?? [];
+      siblings.push(category.id);
+      childrenByParent.set(category.parentId, siblings);
     } else {
       roots.push(node);
     }
   }
 
-  return roots;
+  // CAT-09: una categoría (o subcategoría) sin productos activos, propios o
+  // heredados de sus hijas, no debe aparecer en el mega-menú ni en el
+  // sitemap — es una página vacía para el visitante y para Google.
+  function totalActiveProducts(categoryId: string): number {
+    const own = ownCountByCategory.get(categoryId) ?? 0;
+    const childrenIds = childrenByParent.get(categoryId) ?? [];
+    return own + childrenIds.reduce((sum, childId) => sum + totalActiveProducts(childId), 0);
+  }
+
+  function pruneEmpty(nodes: CategoryNode[]): CategoryNode[] {
+    return nodes
+      .filter((node) => totalActiveProducts(node.id) > 0)
+      .map((node) => ({ ...node, children: pruneEmpty(node.children) }));
+  }
+
+  return pruneEmpty(roots);
 }
 
 /// Devuelve la categoría solicitada junto con los ids de todas sus
