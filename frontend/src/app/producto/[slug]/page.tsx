@@ -62,7 +62,30 @@ export default async function ProductPage({ params }: PageProps) {
 
   const firstVariant = product.variantes[0];
   const disponible = product.variantes.some((v) => v.disponible);
-  const precio = firstVariant?.precio ?? "0";
+  const precios = product.variantes.map((v) => Number(v.precio)).filter((p) => Number.isFinite(p));
+
+  // CAT-07: con una sola variante, un `Offer` de un precio es correcto. Con
+  // varias (tamaños/colores con precios distintos), Google espera un
+  // `AggregateOffer` con el rango — un solo precio fijo sería incorrecto en
+  // cuanto haya más de un precio real.
+  const offers =
+    product.variantes.length > 1
+      ? {
+          "@type": "AggregateOffer",
+          url: `${SITE_URL}/producto/${product.slug}`,
+          priceCurrency: "GTQ",
+          lowPrice: precios.length > 0 ? Math.min(...precios) : 0,
+          highPrice: precios.length > 0 ? Math.max(...precios) : 0,
+          offerCount: product.variantes.length,
+          availability: disponible ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        }
+      : {
+          "@type": "Offer",
+          url: `${SITE_URL}/producto/${product.slug}`,
+          priceCurrency: "GTQ",
+          price: firstVariant?.precio ?? "0",
+          availability: disponible ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        };
 
   const productJsonLd = {
     "@context": "https://schema.org",
@@ -72,13 +95,7 @@ export default async function ProductPage({ params }: PageProps) {
     description: product.descripcionCorta ?? product.descripcionLarga ?? product.nombre,
     sku: firstVariant?.sku,
     brand: product.marca ? { "@type": "Brand", name: product.marca } : undefined,
-    offers: {
-      "@type": "Offer",
-      url: `${SITE_URL}/producto/${product.slug}`,
-      priceCurrency: "GTQ",
-      price: precio,
-      availability: disponible ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    },
+    offers,
   };
 
   const breadcrumbJsonLd = {
