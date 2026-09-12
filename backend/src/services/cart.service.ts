@@ -210,9 +210,17 @@ export async function addItem(ctx: CartContext, variantId: string, cantidad: num
   const { cartId, newCartToken } = await resolveOrCreateCartId(ctx);
 
   const { limitado } = await prisma.$transaction(async (tx) => {
+    // CAR-03/CAR-12: NO pre-recortar `cantidad` en el `create` — si se
+    // clampara aquí, `upserted.cantidad` saldría ya dentro del tope y el
+    // chequeo de abajo nunca detectaría que se pidió de más en una línea
+    // nueva (p. ej. pedir 10 con 4 en stock creaba la línea en 4 pero
+    // `limitado` quedaba en `false`, sin avisar). El validador ya garantiza
+    // `cantidad <= 99` en la entrada; el recorte real (por stock o por el
+    // tope de 99) se aplica siempre después, para create y para update por
+    // igual.
     const upserted = await tx.cartItem.upsert({
       where: { cartId_variantId: { cartId, variantId } },
-      create: { cartId, variantId, cantidad: Math.min(cantidad, stockDisponible, MAX_CANTIDAD), precioUnitarioCongelado: variant.precio },
+      create: { cartId, variantId, cantidad, precioUnitarioCongelado: variant.precio },
       // CAR-11: agregar más unidades a una línea que ya existía NO debe
       // pisar en silencio el precio congelado — si el precio subió desde
       // que se agregó por primera vez, el cliente merece ver el aviso
