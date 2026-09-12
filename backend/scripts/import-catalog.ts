@@ -26,7 +26,10 @@ import { resolveCategorySlug } from "./categoryMapping";
 
 const EXTERNAL_SOURCE = "excel_almacen_2026";
 const DEFAULT_FILE = path.resolve(__dirname, "../../productos_almacen_el_tesoro_completo.xlsx");
-const DEFAULT_BUCKET = "eltesoro-product-images-staging";
+// INF-08: el bucket real cambia por entorno (staging hoy, producción en el
+// Módulo 09) — nunca debe quedar fijo en el código. `--bucket` en la línea
+// de comandos sigue ganando sobre esto (ver parseArgs).
+const DEFAULT_BUCKET = process.env.PRODUCT_IMAGES_BUCKET ?? "eltesoro-product-images-staging";
 
 interface RawRow {
   Código: unknown;

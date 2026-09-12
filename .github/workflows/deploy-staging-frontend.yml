@@ -27,6 +27,10 @@ env:
   # agrega /api/<path> al armar el destino de cada request.
   API_ORIGIN: https://eltesoro-backend-staging-472679541597.us-central1.run.app
   SITE_URL: https://eltesoro-frontend-staging-472679541597.us-central1.run.app
+  # INF-08: next.config.ts lo lee en tiempo de arranque del servidor (no de
+  # build) para armar remotePatterns de next/image — coincide con el bucket
+  # real de este entorno; en producción (Módulo 09) será otro.
+  PRODUCT_IMAGES_BUCKET: eltesoro-product-images-staging
   WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
   DEPLOYER_SA: "eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
 
@@ -96,7 +100,7 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --port=8080 \
-            --set-env-vars="API_PROXY_TARGET=${{ env.API_ORIGIN }}" \
+            --set-env-vars="API_PROXY_TARGET=${{ env.API_ORIGIN }},PRODUCT_IMAGES_BUCKET=${{ env.PRODUCT_IMAGES_BUCKET }}" \
             --set-secrets=INTERNAL_PROXY_SECRET=eltesoro-internal-proxy-secret:latest \
             --min-instances=0 --max-instances=3 --memory=512Mi \
             --service-account="${{ env.DEPLOYER_SA }}"
