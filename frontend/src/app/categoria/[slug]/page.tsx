@@ -5,7 +5,7 @@ import { FilterBar } from "@/components/catalog/FilterBar";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { Pagination } from "@/components/catalog/Pagination";
 import { ErrorState } from "@/components/catalog/ErrorState";
-import { getCategoryProducts, getCategoryTree, findCategoryPath } from "@/services/catalogService";
+import { getCategoryFacets, getCategoryProducts, getCategoryTree, findCategoryPath } from "@/services/catalogService";
 import { ApiError } from "@/services/api";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import styles from "./page.module.css";
@@ -64,17 +64,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const current = path.at(-1)!;
 
   let result;
-  let facetsBrands: string[] = [];
-  let facetsMateriales: string[] = [];
+  let facets;
   try {
-    [result] = await Promise.all([
+    [result, facets] = await Promise.all([
       getCategoryProducts(slug, { page, sort, precioMin, precioMax, marca, material, disponible }),
+      getCategoryFacets(slug),
     ]);
-    const facetSource = await getCategoryProducts(slug, { limit: 100 });
-    facetsBrands = Array.from(
-      new Set(facetSource.items.map((item) => item.marca).filter((m): m is string => Boolean(m))),
-    ).sort();
-    facetsMateriales = Array.from(new Set(facetSource.items.flatMap((item) => item.materiales ?? []))).sort();
   } catch (error) {
     const message = error instanceof ApiError ? error.message : undefined;
     return <ErrorState title="No pudimos cargar los productos" description={message} />;
@@ -106,7 +101,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       <h1 className={styles.title}>{current.nombre}</h1>
       {current.descripcion && <p className={styles.description}>{current.descripcion}</p>}
 
-      <FilterBar marcasDisponibles={facetsBrands} materialesDisponibles={facetsMateriales} totalResultados={result.total} />
+      <FilterBar marcasDisponibles={facets.marcas} materialesDisponibles={facets.materiales} totalResultados={result.total} />
       <ProductGrid products={result.items} />
       <Pagination page={result.page} totalPages={result.totalPages} />
     </main>

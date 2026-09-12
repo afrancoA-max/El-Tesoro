@@ -14,7 +14,9 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:setup": "npm run prisma:migrate:deploy && npm run prisma:seed",
     "import:catalogo": "ts-node scripts/import-catalog.ts",
-    "create-staff-user": "ts-node scripts/create-staff-user.ts"
+    "create-staff-user": "ts-node scripts/create-staff-user.ts",
+    "backfill:precio-disponible": "ts-node scripts/backfill-precio-disponible.ts",
+    "manage-banners": "ts-node scripts/manage-banners.ts"
   },
   "dependencies": {
     "@el-tesoro/shared": "*",

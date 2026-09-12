@@ -106,6 +106,22 @@ export interface PaginatedSearch {
   totalPages: number;
 }
 
+export interface BannerSummary {
+  id: string;
+  titulo: string;
+  subtitulo: string | null;
+  imagenUrl: string;
+  enlace: string;
+  orden: number;
+}
+
+export interface CategoryFacets {
+  marcas: string[];
+  materiales: string[];
+  precioMin: number | null;
+  precioMax: number | null;
+}
+
 export interface SitemapEntry {
   slug: string;
   updatedAt: string;

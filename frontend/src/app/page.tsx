@@ -8,8 +8,8 @@ import { CategoryRail } from "@/components/home/CategoryRail";
 import { NewsletterPopup } from "@/components/home/NewsletterPopup";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { ErrorState } from "@/components/catalog/ErrorState";
-import { getCategoryTree, getCategoryProducts } from "@/services/catalogService";
-import { CategoryNode, ProductListItem } from "@/lib/api-types";
+import { getCategoryTree, getCategoryProducts, getBanners } from "@/services/catalogService";
+import { BannerSummary, CategoryNode, ProductListItem } from "@/lib/api-types";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import bannerGridStyles from "@/components/home/BannerGrid.module.css";
 import styles from "./page.module.css";
@@ -27,7 +27,7 @@ interface DepartmentSection {
 }
 
 async function loadHomeData() {
-  const tree = await getCategoryTree();
+  const [tree, banners] = await Promise.all([getCategoryTree(), getBanners().catch(() => [] as BannerSummary[])]);
 
   const productResults = await Promise.all(
     tree.map((department) => getCategoryProducts(department.slug, { limit: 10, sort: "novedad" }).catch(() => null)),
@@ -67,6 +67,7 @@ async function loadHomeData() {
     sections,
     brands,
     bannerCandidates,
+    banners,
   };
 }
 
@@ -82,9 +83,24 @@ export default async function HomePage() {
     );
   }
 
+  // CAT-06: si hay banners administrados a mano (npm run manage-banners), se
+  // usan esos en lugar de los bloques automáticos armados con fotos de
+  // producto — mismos huecos visuales (uno ancho, luego pares a la mitad).
+  // Sin ninguno configurado o vigente, el home cae al comportamiento
+  // automático que ya tenía.
+  const usingManualBanners = data.banners.length > 0;
+
   const [bannerA, bannerB, bannerC] = data.bannerCandidates;
-  const bannerSlugs = new Set([bannerA, bannerB, bannerC].filter(Boolean).map((b) => b!.department.slug));
+  const bannerSlugs = usingManualBanners
+    ? new Set<string>()
+    : new Set([bannerA, bannerB, bannerC].filter(Boolean).map((b) => b!.department.slug));
   const restSections = data.sections.filter((s) => !bannerSlugs.has(s.department.slug));
+
+  const [manualFull, ...manualRest] = data.banners;
+  const manualHalfPairs: BannerSummary[][] = [];
+  for (let i = 0; i < manualRest.length; i += 2) {
+    manualHalfPairs.push(manualRest.slice(i, i + 2));
+  }
 
   return (
     <main className={styles.main}>
@@ -92,19 +108,33 @@ export default async function HomePage() {
 
       <CategoryShowcase items={data.showcaseItems} />
 
-      {bannerA && (
-        <div className={styles.bannerFullWrap}>
-          <Banner
-            title={`Todo en ${bannerA.department.nombre}`}
-            subtitle="Descubre la selección completa de esta categoría."
-            ctaLabel="Ver categoría"
-            href={`/categoria/${bannerA.department.slug}`}
-            image={bannerA.products.find((p) => p.imagenPrincipal)?.imagenPrincipal ?? null}
-            tone="navy"
-            size="full"
-          />
-        </div>
-      )}
+      {usingManualBanners
+        ? manualFull && (
+            <div className={styles.bannerFullWrap}>
+              <Banner
+                title={manualFull.titulo}
+                subtitle={manualFull.subtitulo ?? undefined}
+                ctaLabel="Ver más"
+                href={manualFull.enlace}
+                image={manualFull.imagenUrl}
+                tone="navy"
+                size="full"
+              />
+            </div>
+          )
+        : bannerA && (
+            <div className={styles.bannerFullWrap}>
+              <Banner
+                title={`Todo en ${bannerA.department.nombre}`}
+                subtitle="Descubre la selección completa de esta categoría."
+                ctaLabel="Ver categoría"
+                href={`/categoria/${bannerA.department.slug}`}
+                image={bannerA.products.find((p) => p.imagenPrincipal)?.imagenPrincipal ?? null}
+                tone="navy"
+                size="full"
+              />
+            </div>
+          )}
 
       {data.novedades.length > 0 && (
         <section className={styles.novedades}>
@@ -113,26 +143,44 @@ export default async function HomePage() {
         </section>
       )}
 
-      {bannerB && bannerC && (
-        <div className={bannerGridStyles.grid}>
-          <Banner
-            title={bannerB.department.nombre}
-            ctaLabel="Explorar"
-            href={`/categoria/${bannerB.department.slug}`}
-            image={bannerB.products.find((p) => p.imagenPrincipal)?.imagenPrincipal ?? null}
-            tone="gold"
-            size="half"
-          />
-          <Banner
-            title={bannerC.department.nombre}
-            ctaLabel="Explorar"
-            href={`/categoria/${bannerC.department.slug}`}
-            image={bannerC.products.find((p) => p.imagenPrincipal)?.imagenPrincipal ?? null}
-            tone="navy"
-            size="half"
-          />
-        </div>
-      )}
+      {usingManualBanners
+        ? manualHalfPairs.map((pair, index) => (
+            <div key={pair.map((b) => b.id).join("-") || index} className={bannerGridStyles.grid}>
+              {pair.map((banner, i) => (
+                <Banner
+                  key={banner.id}
+                  title={banner.titulo}
+                  subtitle={banner.subtitulo ?? undefined}
+                  ctaLabel="Ver más"
+                  href={banner.enlace}
+                  image={banner.imagenUrl}
+                  tone={i === 0 ? "gold" : "navy"}
+                  size="half"
+                />
+              ))}
+            </div>
+          ))
+        : bannerB &&
+          bannerC && (
+            <div className={bannerGridStyles.grid}>
+              <Banner
+                title={bannerB.department.nombre}
+                ctaLabel="Explorar"
+                href={`/categoria/${bannerB.department.slug}`}
+                image={bannerB.products.find((p) => p.imagenPrincipal)?.imagenPrincipal ?? null}
+                tone="gold"
+                size="half"
+              />
+              <Banner
+                title={bannerC.department.nombre}
+                ctaLabel="Explorar"
+                href={`/categoria/${bannerC.department.slug}`}
+                image={bannerC.products.find((p) => p.imagenPrincipal)?.imagenPrincipal ?? null}
+                tone="navy"
+                size="half"
+              />
+            </div>
+          )}
 
       {restSections.map(({ department, products }) => (
         <CategoryRail

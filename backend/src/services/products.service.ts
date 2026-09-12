@@ -70,18 +70,15 @@ function toSummary(product: ProductWithVariants) {
   };
 }
 
-export async function listProductsByCategory(
-  categorySlug: string,
+// CAT-02: `precioDesde`/`disponible` son las columnas desnormalizadas en
+// `products` (mantenidas por el importador, ver import-catalog.ts) — permiten
+// filtrar, ordenar y paginar en SQL sin cargar el catálogo completo de la
+// categoría en memoria en cada request.
+function buildProductListWhere(
+  categoryId: string,
+  descendantIds: string[],
   filters: ProductListFilters,
-  pagination: PaginationParams,
-): Promise<PaginatedResult<ReturnType<typeof toSummary>>> {
-  const { categoryId, descendantIds } = await getCategoryWithDescendantIds(categorySlug);
-
-  // Cada condición sobre `variants` va en su propia entrada de `AND`: usar
-  // varias claves `variants` en el mismo objeto se pisarían entre sí (el
-  // filtro de precio y el de material son condiciones independientes, no
-  // deben exigirse ambas sobre la MISMA variante necesariamente, pero sí
-  // deben combinarse — objeto spread con la misma key solo deja la última).
+): Prisma.ProductWhereInput {
   const variantConditions: Prisma.ProductWhereInput[] = [];
 
   if (filters.material) {
@@ -102,54 +99,94 @@ export async function listProductsByCategory(
     });
   }
 
-  if (filters.precioMin !== undefined || filters.precioMax !== undefined) {
-    variantConditions.push({
-      variants: {
-        some: {
-          activo: true,
-          precio: {
-            ...(filters.precioMin !== undefined ? { gte: filters.precioMin } : {}),
-            ...(filters.precioMax !== undefined ? { lte: filters.precioMax } : {}),
-          },
-        },
-      },
-    });
-  }
-
-  const where: Prisma.ProductWhereInput = {
+  return {
     estado: "activo",
     categoriaId: { in: [categoryId, ...descendantIds] },
     ...(filters.marca ? { marca: { equals: filters.marca, mode: "insensitive" } } : {}),
+    ...(filters.disponible !== undefined ? { disponible: filters.disponible } : {}),
+    ...(filters.precioMin !== undefined || filters.precioMax !== undefined
+      ? {
+          precioDesde: {
+            ...(filters.precioMin !== undefined ? { gte: filters.precioMin } : {}),
+            ...(filters.precioMax !== undefined ? { lte: filters.precioMax } : {}),
+          },
+        }
+      : {}),
     ...(variantConditions.length > 0 ? { AND: variantConditions } : {}),
   };
+}
 
-  // El catálogo de este módulo es pequeño (importador filtra a productos con
-  // precio real, ver docs/plan/02-api-catalogo.md); se ordena/pagina en
-  // memoria para poder ordenar por "precio desde" (mínimo entre variantes),
-  // algo que Prisma no soporta como orderBy de agregación en relaciones
-  // to-many. Si el catálogo crece sustancialmente, denormalizar precioDesde
-  // en products sería el siguiente paso.
-  const allMatching = await prisma.product.findMany({ where, ...productWithVariants });
+export async function listProductsByCategory(
+  categorySlug: string,
+  filters: ProductListFilters,
+  pagination: PaginationParams,
+): Promise<PaginatedResult<ReturnType<typeof toSummary>>> {
+  const { categoryId, descendantIds } = await getCategoryWithDescendantIds(categorySlug);
+  const where = buildProductListWhere(categoryId, descendantIds, filters);
 
-  const filtered =
-    filters.disponible === undefined
-      ? allMatching
-      : allMatching.filter(
-          (p) => p.variants.some((v) => (v.inventory?.cantidadDisponible ?? 0) > 0) === filters.disponible,
-        );
+  const orderBy: Prisma.ProductOrderByWithRelationInput =
+    filters.sort === "precio_asc"
+      ? { precioDesde: "asc" }
+      : filters.sort === "precio_desc"
+        ? { precioDesde: "desc" }
+        : { createdAt: "desc" }; // novedad
 
-  const summaries = filtered.map(toSummary);
+  const [items, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy,
+      skip: pagination.skip,
+      take: pagination.limit,
+      ...productWithVariants,
+    }),
+    prisma.product.count({ where }),
+  ]);
 
-  summaries.sort((a, b) => {
-    if (filters.sort === "precio_asc") return (a.precioDesde ?? 0) - (b.precioDesde ?? 0);
-    if (filters.sort === "precio_desc") return (b.precioDesde ?? 0) - (a.precioDesde ?? 0);
-    return b.createdAt.getTime() - a.createdAt.getTime(); // novedad
-  });
+  return buildPaginatedResult(items.map(toSummary), total, pagination);
+}
 
-  const total = summaries.length;
-  const page = summaries.slice(pagination.skip, pagination.skip + pagination.limit);
+export interface CategoryFacets {
+  marcas: string[];
+  materiales: string[];
+  precioMin: number | null;
+  precioMax: number | null;
+}
 
-  return buildPaginatedResult(page, total, pagination);
+// CAT-02/CAT-03: antes las facetas (marcas, materiales) se calculaban en el
+// frontend a partir de los primeros 100 productos del listado paginado — si
+// la categoría tenía más, faltaban marcas. Este endpoint las calcula con
+// `groupBy`/`aggregate` sobre TODOS los productos activos de la categoría
+// (y sus subcategorías), independiente de la paginación.
+export async function getCategoryFacets(categorySlug: string): Promise<CategoryFacets> {
+  const { categoryId, descendantIds } = await getCategoryWithDescendantIds(categorySlug);
+  const categoriaId = { in: [categoryId, ...descendantIds] };
+
+  const [marcasGroup, materiales, precioAgg] = await Promise.all([
+    prisma.product.groupBy({
+      by: ["marca"],
+      where: { estado: "activo", categoriaId, marca: { not: null } },
+    }),
+    prisma.attributeValue.findMany({
+      where: {
+        attributeType: { nombre: "Material" },
+        variants: { some: { variant: { activo: true, product: { estado: "activo", categoriaId } } } },
+      },
+      select: { valor: true },
+      distinct: ["valor"],
+    }),
+    prisma.product.aggregate({
+      where: { estado: "activo", categoriaId },
+      _min: { precioDesde: true },
+      _max: { precioDesde: true },
+    }),
+  ]);
+
+  return {
+    marcas: marcasGroup.map((g) => g.marca).filter((m): m is string => Boolean(m)).sort(),
+    materiales: materiales.map((m) => m.valor).sort(),
+    precioMin: precioAgg._min.precioDesde !== null ? Number(precioAgg._min.precioDesde) : null,
+    precioMax: precioAgg._max.precioDesde !== null ? Number(precioAgg._max.precioDesde) : null,
+  };
 }
 
 export async function getProductBySlug(slug: string) {

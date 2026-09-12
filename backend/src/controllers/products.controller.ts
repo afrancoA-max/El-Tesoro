@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { getProductBySlug, listProductsByCategory } from "../services/products.service";
+import { getCategoryFacets, getProductBySlug, listProductsByCategory } from "../services/products.service";
 import { parsePagination } from "../utils/pagination";
 import { productListQuerySchema } from "../validators/productList.validator";
 
@@ -22,6 +22,15 @@ export async function listProductsByCategoryController(req: Request, res: Respon
     );
 
     res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getCategoryFacetsController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const facets = await getCategoryFacets(req.params.slug);
+    res.json({ success: true, data: facets });
   } catch (error) {
     next(error);
   }

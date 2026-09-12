@@ -72,6 +72,16 @@ model Product {
   /// extensión de PostgreSQL (unaccent) para que "sarten" encuentre "sartén".
   busqueda String @default("")
 
+  /// CAT-02: copia del precio mínimo entre variantes activas y de si alguna
+  /// tiene stock, mantenida por el importador (y por cualquier proceso que
+  /// cree/actualice variantes o inventario) cada vez que cambian. Existen
+  /// solo para poder ordenar, filtrar y paginar por SQL en
+  /// `listProductsByCategory` sin cargar todas las variantes de la
+  /// categoría en memoria — nunca se leen como fuente de verdad del precio
+  /// real (esa sigue siendo `ProductVariant.precio`).
+  precioDesde Decimal? @db.Decimal(10, 2)
+  disponible  Boolean  @default(false)
+
   /// Campos B2B latentes (módulo 11 los activa). Precio mayorista y compra
   /// mínima a nivel de producto; sin uso hasta el portal mayorista, pero
   /// deben existir desde ya para no migrar después.
@@ -100,6 +110,8 @@ model Product {
   @@unique([externalSource, externalId])
   @@index([categoriaId])
   @@index([busqueda])
+  @@index([categoriaId, precioDesde])
+  @@index([categoriaId, disponible])
   @@map("products")
 }
 
@@ -430,4 +442,33 @@ model CartItem {
   @@index([cartId])
   @@index([variantId])
   @@map("cart_items")
+}
+
+// ---------------------------------------------------------------------------
+// CAT-06 — Banners del home. No hay panel admin en el proyecto todavía, así
+// que se administran con `npm run manage-banners` (scripts/manage-banners.ts)
+// corriendo contra la base de datos real — sin pantalla web ni login nuevo.
+// Si no hay ningún banner activo, el home usa el comportamiento automático
+// (bloques armados con fotos de producto) que ya tenía.
+// ---------------------------------------------------------------------------
+
+model Banner {
+  id        String   @id @default(uuid())
+  titulo    String
+  subtitulo String?
+  imagenUrl String
+  enlace    String
+  orden     Int      @default(0)
+  activo    Boolean  @default(true)
+
+  /// Ambos opcionales: un banner sin fechas está activo indefinidamente
+  /// mientras `activo` sea true.
+  fechaInicio DateTime?
+  fechaFin    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([activo, orden])
+  @@map("banners")
 }

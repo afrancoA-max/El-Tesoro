@@ -1,5 +1,7 @@
 import { apiGet } from "./api";
 import {
+  BannerSummary,
+  CategoryFacets,
   CategoryNode,
   PaginatedProducts,
   PaginatedSearch,
@@ -29,6 +31,13 @@ export function getProduct(slug: string): Promise<ProductDetail> {
   return apiGet<ProductDetail>(`/products/${slug}`);
 }
 
+// CAT-03: facetas (marcas/materiales/rango de precio) calculadas en el
+// backend sobre TODOS los productos activos de la categoría — reemplaza el
+// cálculo en el frontend sobre los primeros 100 productos del listado.
+export function getCategoryFacets(slug: string): Promise<CategoryFacets> {
+  return apiGet<CategoryFacets>(`/categories/${slug}/facets`);
+}
+
 export function searchProducts(query: string, params: { page?: number; limit?: number } = {}): Promise<PaginatedSearch> {
   return apiGet<PaginatedSearch>("/search", { q: query, page: params.page, limit: params.limit });
 }
@@ -38,6 +47,13 @@ export function searchProducts(query: string, params: { page?: number; limit?: n
 // que solo cubría categorías hoja y 100 productos por categoría.
 export function getSitemapData(): Promise<SitemapData> {
   return apiGet<SitemapData>("/sitemap");
+}
+
+// CAT-06: banners administrados a mano (npm run manage-banners), sin panel
+// admin. Vacío cuando no hay ninguno configurado o vigente — el home cae a
+// su selección automática por categoría en ese caso.
+export function getBanners(): Promise<BannerSummary[]> {
+  return apiGet<BannerSummary[]>("/banners");
 }
 
 // Encuentra el nodo (departamento o categoría hoja) que coincide con un slug,
