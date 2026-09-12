@@ -67,6 +67,12 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # El backend importa @el-tesoro/shared desde su dist/ compilado (no
+      # desde el código fuente) — sin este paso, vitest falla al resolver
+      # ese import porque el workspace nunca se construyó en este job.
+      - name: Compilar shared
+        run: npm run build --workspace=shared
+
       - name: Aplicar migraciones de Prisma
         run: npx prisma migrate deploy --schema=backend/prisma/schema.prisma
 
