@@ -91,7 +91,9 @@ export interface SearchResultItem {
   slug: string;
   nombre: string;
   descripcionCorta: string | null;
+  marca: string | null;
   precioDesde: number;
+  disponible: boolean;
   imagenPrincipal: string | null;
   varianteUnica: VarianteUnica | null;
 }
@@ -102,6 +104,16 @@ export interface PaginatedSearch {
   limit: number;
   total: number;
   totalPages: number;
+}
+
+export interface SitemapEntry {
+  slug: string;
+  updatedAt: string;
+}
+
+export interface SitemapData {
+  categorias: SitemapEntry[];
+  productos: SitemapEntry[];
 }
 
 export interface ProductQueryParams {

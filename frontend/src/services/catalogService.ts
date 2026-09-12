@@ -5,6 +5,7 @@ import {
   PaginatedSearch,
   ProductDetail,
   ProductQueryParams,
+  SitemapData,
 } from "@/lib/api-types";
 
 export function getCategoryTree(): Promise<CategoryNode[]> {
@@ -30,6 +31,13 @@ export function getProduct(slug: string): Promise<ProductDetail> {
 
 export function searchProducts(query: string, params: { page?: number; limit?: number } = {}): Promise<PaginatedSearch> {
   return apiGet<PaginatedSearch>("/search", { q: query, page: params.page, limit: params.limit });
+}
+
+// CAT-05: todas las categorías con productos activos y todos los productos
+// activos, en una sola llamada — reemplaza el recorrido manual del sitemap
+// que solo cubría categorías hoja y 100 productos por categoría.
+export function getSitemapData(): Promise<SitemapData> {
+  return apiGet<SitemapData>("/sitemap");
 }
 
 // Encuentra el nodo (departamento o categoría hoja) que coincide con un slug,

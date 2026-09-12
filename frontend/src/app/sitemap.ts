@@ -1,41 +1,28 @@
 import { MetadataRoute } from "next";
-import { getCategoryTree, getCategoryProducts } from "@/services/catalogService";
-import { CategoryNode } from "@/lib/api-types";
+import { getSitemapData } from "@/services/catalogService";
 import { SITE_URL } from "@/lib/site";
-
-function flattenCategories(nodes: CategoryNode[]): CategoryNode[] {
-  return nodes.flatMap((node) => [node, ...flattenCategories(node.children)]);
-}
 
 // Generado dinámicamente desde el catálogo real — nunca a mano — para que
 // nunca quede desalineado con las categorías/productos activos (ver
 // retail-seo-performance sección 4).
+//
+// CAT-05: antes recorría el árbol de categorías en el propio frontend
+// (solo categorías hoja, máximo 100 productos por categoría, sin
+// `lastModified`). Ahora usa GET /api/sitemap, que devuelve TODAS las
+// categorías con productos activos y TODOS los productos activos con su
+// fecha real de actualización.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const tree = await getCategoryTree().catch(() => []);
-  const categories = flattenCategories(tree);
+  const data = await getSitemapData().catch(() => ({ categorias: [], productos: [] }));
 
-  const categoryEntries: MetadataRoute.Sitemap = categories.map((category) => ({
+  const categoryEntries: MetadataRoute.Sitemap = data.categorias.map((category) => ({
     url: `${SITE_URL}/categoria/${category.slug}`,
+    lastModified: new Date(category.updatedAt),
     changeFrequency: "daily",
   }));
 
-  const productSlugs = new Set<string>();
-  await Promise.all(
-    categories
-      .filter((category) => category.children.length === 0)
-      .map(async (category) => {
-        try {
-          const result = await getCategoryProducts(category.slug, { limit: 100 });
-          for (const item of result.items) productSlugs.add(item.slug);
-        } catch {
-          // Categoría sin productos o API no disponible momentáneamente: se omite de este sitemap,
-          // no rompe la generación del resto.
-        }
-      }),
-  );
-
-  const productEntries: MetadataRoute.Sitemap = Array.from(productSlugs).map((slug) => ({
-    url: `${SITE_URL}/producto/${slug}`,
+  const productEntries: MetadataRoute.Sitemap = data.productos.map((product) => ({
+    url: `${SITE_URL}/producto/${product.slug}`,
+    lastModified: new Date(product.updatedAt),
     changeFrequency: "weekly",
   }));
 
