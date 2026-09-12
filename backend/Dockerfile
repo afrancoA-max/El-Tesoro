@@ -25,14 +25,19 @@ COPY shared/package.json shared/package.json
 COPY backend/package.json backend/package.json
 RUN npm ci --omit=dev --ignore-scripts
 
-COPY --from=build /app/shared/dist shared/dist
-COPY --from=build /app/backend/dist backend/dist
-COPY --from=build /app/backend/prisma backend/prisma
-COPY --from=build /app/node_modules/.prisma node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma/client node_modules/@prisma/client
-COPY backend/scripts backend/scripts
+COPY --from=build --chown=node:node /app/shared/dist shared/dist
+COPY --from=build --chown=node:node /app/backend/dist backend/dist
+COPY --from=build --chown=node:node /app/backend/prisma backend/prisma
+COPY --from=build --chown=node:node /app/node_modules/.prisma node_modules/.prisma
+COPY --from=build --chown=node:node /app/node_modules/@prisma/client node_modules/@prisma/client
+COPY --chown=node:node backend/scripts backend/scripts
 
 WORKDIR /app/backend
+
+# INF-10: sin esto el contenedor corre como root — si alguien compromete el
+# proceso Node, hereda privilegios de root dentro del contenedor. La imagen
+# node:20-slim ya trae el usuario "node" (uid 1000) sin privilegios.
+USER node
 
 EXPOSE 8080
 CMD ["node", "dist/index.js"]

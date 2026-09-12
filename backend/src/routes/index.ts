@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { prisma } from "../config/prisma";
 import { categoriesRouter } from "./public/categories.routes";
 import { productsRouter } from "./public/products.routes";
 import { searchRouter } from "./public/search.routes";
@@ -25,6 +26,15 @@ apiRouter.use("/staff/inventory", staffInventoryRouter);
 apiRouter.use("/sitemap", sitemapRouter);
 apiRouter.use("/banners", bannersRouter);
 
-apiRouter.get("/health", (_req, res) => {
-  res.json({ success: true, data: { status: "ok" } });
+// INF-10: antes solo confirmaba que el proceso Express respondía, nunca que
+// la base de datos estuviera accesible — un Cloud SQL caído (o el
+// connector mal configurado) se veía "sano" aquí mientras todo lo demás
+// fallaba con 500.
+apiRouter.get("/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ success: true, data: { status: "ok" } });
+  } catch {
+    res.status(503).json({ success: false, error: { code: "DATABASE_UNAVAILABLE", message: "No se pudo conectar a la base de datos." } });
+  }
 });

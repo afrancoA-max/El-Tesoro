@@ -26,9 +26,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-COPY --from=build /app/frontend/.next/standalone ./
-COPY --from=build /app/frontend/public ./frontend/public
-COPY --from=build /app/frontend/.next/static ./frontend/.next/static
+COPY --from=build --chown=node:node /app/frontend/.next/standalone ./
+COPY --from=build --chown=node:node /app/frontend/public ./frontend/public
+COPY --from=build --chown=node:node /app/frontend/.next/static ./frontend/.next/static
+
+# INF-10: no correr como root dentro del contenedor.
+USER node
 
 EXPOSE 8080
 CMD ["node", "frontend/server.js"]
