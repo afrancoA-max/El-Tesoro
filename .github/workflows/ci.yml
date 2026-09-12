@@ -32,3 +32,43 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # INF-04: pruebas de integración mínimas (auth, carrito, direcciones)
+  # contra un Postgres real de servicio — antes no había ninguna prueba
+  # automática, y checkout (Módulo 06) y pagos (07) necesitan esta base
+  # antes de construirse encima.
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: eltesoro
+          POSTGRES_PASSWORD: eltesoro
+          POSTGRES_DB: eltesoro_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://eltesoro:eltesoro@localhost:5432/eltesoro_test?schema=public"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Aplicar migraciones de Prisma
+        run: npx prisma migrate deploy --schema=backend/prisma/schema.prisma
+
+      - name: Pruebas de integración del backend
+        run: npm run test --workspace=backend

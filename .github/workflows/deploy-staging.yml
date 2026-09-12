@@ -48,6 +48,17 @@ jobs:
           wait-interval: 15
           allowed-conclusions: success
 
+      # INF-04: las pruebas de integración también deben pasar antes de
+      # desplegar (auth, carrito, direcciones).
+      - name: Esperar a que las pruebas de integración terminen en verde
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: "test"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success
+
   deploy:
     needs: wait-for-ci
     runs-on: ubuntu-latest

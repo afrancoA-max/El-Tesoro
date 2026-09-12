@@ -4,13 +4,29 @@ API pública de solo lectura del catálogo (categorías, productos, búsqueda, c
 
 ## Desarrollo local
 
-1. Copiar `.env.example` a `.env` y apuntar `DATABASE_URL` a una base local (`infra/docker-compose.yml`) o a staging vía [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/sql-proxy):
+1. Copiar `.env.example` a `.env` y apuntar `DATABASE_URL` a Postgres **local** (`docker compose -f infra/docker-compose.yml up -d`).
+   INF-01: nunca apuntes este `.env` a staging — un `prisma migrate dev` corrido por error ahí puede pedir un reset y borrar los datos que ve el cliente. Para correr el importador contra staging a propósito, usa `backend/.env.staging` (aparte, ignorado por git) vía [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/sql-proxy):
    ```bash
    cloud-sql-proxy --port=5433 project-26c70338-0265-4c7e-837:us-central1:proyectoalmaceneltesoro
    ```
 2. `npm install` (desde la raíz del monorepo, es un workspace de npm).
 3. `npm run prisma:migrate:deploy --workspace=backend`
 4. `npm run dev --workspace=backend`
+
+## Pruebas (INF-04)
+
+Pruebas de integración (vitest + supertest) contra Postgres real — nunca mocks (ver `tests/setup.ts`, que se niega a correr si `DATABASE_URL` no apunta a localhost). Cubren lo mínimo antes de construir checkout/pagos encima: auth (registro, login, refresh, credenciales inválidas), carrito (agregar, límite de stock, fusión anónimo→cuenta, IDOR) y direcciones (IDOR).
+
+```bash
+# Requiere una base de PRUEBAS aparte de la de desarrollo (se trunca en cada test):
+createdb -h localhost -U eltesoro eltesoro_test
+DATABASE_URL="postgresql://eltesoro:eltesoro@localhost:5432/eltesoro_test?schema=public" \
+  npm run prisma:migrate:deploy --workspace=backend
+DATABASE_URL="postgresql://eltesoro:eltesoro@localhost:5432/eltesoro_test?schema=public" \
+  npm run test --workspace=backend
+```
+
+El CI (`.github/workflows/ci.yml`, job `test`) las corre automáticamente contra un Postgres de servicio en cada push/PR, y el despliegue a staging espera a que este job termine en verde (ver INF-03).
 
 ## Importador de catálogo
 
