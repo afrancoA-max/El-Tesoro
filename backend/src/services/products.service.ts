@@ -153,19 +153,27 @@ export async function listProductsByCategory(
 }
 
 export async function getProductBySlug(slug: string) {
-  const product = await prisma.product.findUnique({
-    where: { slug },
+  // CAT-01: un slug en borrador/descontinuado no debe responder 200 (Google
+  // lo indexaría y la ficha mostraría variantes que luego fallan al
+  // agregarlas al carrito) — findFirst en vez de findUnique porque
+  // necesitamos combinar el slug con el filtro de estado.
+  const product = await prisma.product.findFirst({
+    where: { slug, estado: "activo" },
     include: {
       categoria: true,
       images: { orderBy: { orden: "asc" } },
       variants: {
+        where: { activo: true },
         include: {
           images: { orderBy: { orden: "asc" } },
           inventory: true,
           atributos: { include: { attributeValue: { include: { attributeType: true } } } },
         },
       },
-      relatedFrom: { include: { relatedProduct: { ...productWithVariants } } },
+      relatedFrom: {
+        where: { relatedProduct: { estado: "activo" } },
+        include: { relatedProduct: { ...productWithVariants } },
+      },
     },
   });
 
