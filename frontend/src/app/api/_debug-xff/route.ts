@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 // en cuanto se tenga el resultado (ver docs/revision/revision-14-sep-pre-modulo-06.md,
 // hallazgo NUEVO-04) — no es parte del proxy real ni debe quedar en main.
 export const dynamic = "force-dynamic";
+// Redeploy trigger: 2026-09-14T1.
 
 export async function GET(request: NextRequest) {
   return Response.json({
