@@ -61,3 +61,18 @@ export function sumMoney(values: MoneyInput[]): string {
 export function moneyEquals(a: MoneyInput, b: MoneyInput): boolean {
   return toCents(a) === toCents(b);
 }
+
+/** NUEVO-03: menor monto de una lista, como texto decimal fijo — para
+ * `precioDesde` entre variantes sin pasar por `Math.min(Number(...))`
+ * (pierde el formato de texto que exige el resto de la API). `null` si la
+ * lista viene vacía (producto sin variantes con precio). */
+export function minMoney(values: MoneyInput[]): string | null {
+  if (values.length === 0) return null;
+  return fromCents(Math.min(...values.map(toCents)));
+}
+
+/** Igual que `minMoney`, pero el mayor monto de la lista. */
+export function maxMoney(values: MoneyInput[]): string | null {
+  if (values.length === 0) return null;
+  return fromCents(Math.max(...values.map(toCents)));
+}

@@ -1,3 +1,4 @@
+import { minMoney, stockVendible } from "@el-tesoro/shared";
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { buildPaginatedResult, PaginatedResult, PaginationParams } from "../utils/pagination";
@@ -43,15 +44,17 @@ export async function listCollectionProducts(slug: string, pagination: Paginatio
   ]);
 
   const items = links.map(({ product }) => {
-    const precios = product.variants.map((v) => Number(v.precio));
+    // NUEVO-02/NUEVO-03: stock vendible (no cantidadDisponible sola) y
+    // precioDesde como texto decimal fijo — mismo criterio que
+    // products.service.ts.
     return {
       slug: product.slug,
       nombre: product.nombre,
-      precioDesde: precios.length > 0 ? Math.min(...precios) : null,
+      precioDesde: minMoney(product.variants.map((v) => v.precio.toString())),
       imagenPrincipal: product.images[0]?.url ?? null,
       varianteUnica:
         product.variants.length === 1
-          ? { id: product.variants[0].id, disponible: (product.variants[0].inventory?.cantidadDisponible ?? 0) > 0 }
+          ? { id: product.variants[0].id, disponible: stockVendible(product.variants[0].inventory) > 0 }
           : null,
     };
   });

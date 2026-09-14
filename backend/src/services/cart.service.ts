@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { multiplyMoney, sumMoney, moneyEquals } from "@el-tesoro/shared";
+import { multiplyMoney, sumMoney, moneyEquals, stockVendible } from "@el-tesoro/shared";
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { generateOpaqueToken, hashOpaqueToken } from "../utils/tokens";
@@ -72,7 +72,10 @@ function toCartView(cart: CartWithDetails): CartView {
   const items: CartItemView[] = cart.items.map((item) => {
     const precioActual = item.variant.precio.toString();
     const precioCongelado = item.precioUnitarioCongelado.toString();
-    const stockDisponible = item.variant.inventory?.cantidadDisponible ?? 0;
+    // NUEVO-02: stock vendible (cantidadDisponible - cantidadReservada), no
+    // cantidadDisponible sola — en cuanto el Módulo 06 empiece a reservar,
+    // esto ya respeta lo que otro checkout en curso se está llevando.
+    const stockDisponible = stockVendible(item.variant.inventory);
     const disponible = item.variant.activo && item.variant.product.estado === "activo" && stockDisponible > 0;
     const stockLimitado = item.cantidad > stockDisponible;
     // CAR-06: si el stock cayó por debajo de lo que ya había en el carrito
@@ -201,7 +204,7 @@ async function getVariantForCart(variantId: string) {
 /// transacción y parte de la cantidad ya sumada, no de la que leyó antes.
 export async function addItem(ctx: CartContext, variantId: string, cantidad: number): Promise<{ cart: CartView; newCartToken?: string; limitado: boolean }> {
   const variant = await getVariantForCart(variantId);
-  const stockDisponible = variant.inventory?.cantidadDisponible ?? 0;
+  const stockDisponible = stockVendible(variant.inventory);
 
   if (stockDisponible <= 0) {
     throw AppError.badRequest("OUT_OF_STOCK", "Este producto no tiene stock disponible.");
@@ -266,7 +269,7 @@ export async function updateItemQuantity(ctx: CartContext, itemId: string, canti
 
   const item = await findOwnedItem(cartId, itemId);
   const variant = await getVariantForCart(item.variantId);
-  const stockDisponible = variant.inventory?.cantidadDisponible ?? 0;
+  const stockDisponible = stockVendible(variant.inventory);
 
   if (stockDisponible <= 0) {
     throw AppError.badRequest("OUT_OF_STOCK", "Ya no hay stock disponible de este producto — elimínalo del carrito.");
@@ -346,7 +349,7 @@ export async function mergeAnonymousCart(userId: string, rawCartToken: string | 
         tx.cartItem.findUnique({ where: { cartId_variantId: { cartId: userCart.id, variantId: item.variantId } } }),
         tx.inventory.findUnique({ where: { variantId: item.variantId } }),
       ]);
-      const stockDisponible = inventory?.cantidadDisponible ?? 0;
+      const stockDisponible = stockVendible(inventory);
       const cantidadFinal = Math.min((existing?.cantidad ?? 0) + item.cantidad, stockDisponible);
       if (cantidadFinal <= 0) continue;
 

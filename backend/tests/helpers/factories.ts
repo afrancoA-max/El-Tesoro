@@ -7,7 +7,7 @@ function unique(prefix: string): string {
 }
 
 /** Producto activo con una sola variante vendible y su inventario. */
-export async function createSellableVariant(opts: { stock: number; precio?: string }) {
+export async function createSellableVariant(opts: { stock: number; precio?: string; cantidadReservada?: number }) {
   const category = await prisma.category.create({
     data: { slug: unique("cat"), nombre: "Categoría de prueba" },
   });
@@ -17,6 +17,8 @@ export async function createSellableVariant(opts: { stock: number; precio?: stri
   const variant = await prisma.productVariant.create({
     data: { sku: unique("SKU"), precio: opts.precio ?? "100.00", productId: product.id },
   });
-  await prisma.inventory.create({ data: { variantId: variant.id, cantidadDisponible: opts.stock } });
-  return variant;
+  await prisma.inventory.create({
+    data: { variantId: variant.id, cantidadDisponible: opts.stock, cantidadReservada: opts.cantidadReservada ?? 0 },
+  });
+  return { ...variant, categorySlug: category.slug, productSlug: product.slug };
 }

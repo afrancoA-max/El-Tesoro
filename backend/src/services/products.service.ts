@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { minMoney, stockVendible } from "@el-tesoro/shared";
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { getCategoryWithDescendantIds } from "./categories.service";
@@ -28,9 +29,13 @@ const productWithVariants = Prisma.validator<Prisma.ProductDefaultArgs>()({
 type ProductWithVariants = Prisma.ProductGetPayload<typeof productWithVariants>;
 
 function toSummary(product: ProductWithVariants) {
-  const precios = product.variants.map((v) => Number(v.precio));
-  const precioDesde = precios.length > 0 ? Math.min(...precios) : null;
-  const disponible = product.variants.some((v) => (v.inventory?.cantidadDisponible ?? 0) > 0);
+  // NUEVO-03: texto decimal fijo ("129.99"), igual que el resto de la API de
+  // dinero (carrito, ficha) — antes salía como `number` (Math.min sobre
+  // Number(precio)), el único endpoint de catálogo que rompía esa regla.
+  const precioDesde = minMoney(product.variants.map((v) => v.precio.toString()));
+  // NUEVO-02: stock vendible, no cantidadDisponible sola — ver
+  // shared/src/inventory.ts.
+  const disponible = product.variants.some((v) => stockVendible(v.inventory) > 0);
   const materiales = Array.from(
     new Set(
       product.variants.flatMap((v) =>
@@ -47,7 +52,7 @@ function toSummary(product: ProductWithVariants) {
   // una variante, la tarjeta no tiene forma de saber cuál eligió el cliente.
   const varianteUnica =
     product.variants.length === 1
-      ? { id: product.variants[0].id, disponible: (product.variants[0].inventory?.cantidadDisponible ?? 0) > 0 }
+      ? { id: product.variants[0].id, disponible: stockVendible(product.variants[0].inventory) > 0 }
       : null;
 
   return {
@@ -148,8 +153,10 @@ export async function listProductsByCategory(
 export interface CategoryFacets {
   marcas: string[];
   materiales: string[];
-  precioMin: number | null;
-  precioMax: number | null;
+  // NUEVO-03: texto decimal fijo, igual que `precioDesde` en el listado —
+  // antes salían como `number` (único rincón de las facetas con ese tipo).
+  precioMin: string | null;
+  precioMax: string | null;
 }
 
 // CAT-02/CAT-03: antes las facetas (marcas, materiales) se calculaban en el
@@ -184,8 +191,8 @@ export async function getCategoryFacets(categorySlug: string): Promise<CategoryF
   return {
     marcas: marcasGroup.map((g) => g.marca).filter((m): m is string => Boolean(m)).sort(),
     materiales: materiales.map((m) => m.valor).sort(),
-    precioMin: precioAgg._min.precioDesde !== null ? Number(precioAgg._min.precioDesde) : null,
-    precioMax: precioAgg._max.precioDesde !== null ? Number(precioAgg._max.precioDesde) : null,
+    precioMin: precioAgg._min.precioDesde?.toString() ?? null,
+    precioMax: precioAgg._max.precioDesde?.toString() ?? null,
   };
 }
 
@@ -253,10 +260,11 @@ export async function getProductBySlug(slug: string) {
       precio: v.precio,
       precioComparativo: v.precioComparativo,
       activo: v.activo,
-      disponible: (v.inventory?.cantidadDisponible ?? 0) > 0,
-      // CAR-03: la ficha necesita el stock real (no solo el booleano
-      // `disponible`) para el selector de cantidad de 1 a min(stock, 99).
-      stockDisponible: v.inventory?.cantidadDisponible ?? 0,
+      disponible: stockVendible(v.inventory) > 0,
+      // CAR-03/NUEVO-02: la ficha necesita el stock VENDIBLE real (no solo
+      // el booleano `disponible`, y no cantidadDisponible sola una vez que
+      // existan reservas) para el selector de cantidad de 1 a min(stock, 99).
+      stockDisponible: stockVendible(v.inventory),
       atributos: v.atributos.map((a) => ({
         tipo: a.attributeValue.attributeType.nombre,
         valor: a.attributeValue.valor,

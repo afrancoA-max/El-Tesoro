@@ -208,7 +208,7 @@ export function ProductViewer({ product }: ProductViewerProps) {
               slug: product.slug,
               nombre: product.nombre,
               marca: product.marca,
-              precioDesde: Number(precio),
+              precioDesde: precio,
               imagenPrincipal: product.imagenes[0]?.url ?? null,
             }}
           />

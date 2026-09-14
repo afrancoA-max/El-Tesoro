@@ -1,3 +1,4 @@
+import { minMoney, stockVendible } from "@el-tesoro/shared";
 import { prisma } from "../config/prisma";
 import { normalizeText } from "../utils/normalizeText";
 import { buildPaginatedResult, PaginatedResult, PaginationParams } from "../utils/pagination";
@@ -7,7 +8,8 @@ export interface SearchResultItem {
   nombre: string;
   descripcionCorta: string | null;
   marca: string | null;
-  precioDesde: number | null;
+  // NUEVO-03: texto decimal fijo, igual que el listado de categoría.
+  precioDesde: string | null;
   disponible: boolean;
   imagenPrincipal: string | null;
   varianteUnica: { id: string; disponible: boolean } | null;
@@ -48,18 +50,17 @@ export async function searchProducts(
   ]);
 
   const results: SearchResultItem[] = items.map((p) => {
-    const precios = p.variants.map((v) => Number(v.precio));
     return {
       slug: p.slug,
       nombre: p.nombre,
       descripcionCorta: p.descripcionCorta,
       marca: p.marca,
-      precioDesde: precios.length > 0 ? Math.min(...precios) : null,
-      disponible: p.variants.some((v) => (v.inventory?.cantidadDisponible ?? 0) > 0),
+      precioDesde: minMoney(p.variants.map((v) => v.precio.toString())),
+      disponible: p.variants.some((v) => stockVendible(v.inventory) > 0),
       imagenPrincipal: p.images[0]?.url ?? null,
       varianteUnica:
         p.variants.length === 1
-          ? { id: p.variants[0].id, disponible: (p.variants[0].inventory?.cantidadDisponible ?? 0) > 0 }
+          ? { id: p.variants[0].id, disponible: stockVendible(p.variants[0].inventory) > 0 }
           : null,
     };
   });

@@ -28,7 +28,10 @@ export interface ProductListItem {
   descripcionCorta: string | null;
   marca: string | null;
   categoria: { slug: string; nombre: string };
-  precioDesde: number;
+  // NUEVO-03: texto decimal fijo ("129.99"), igual que `ProductVariant.precio`
+  // — antes era `number`, el único campo de precio de la API que no lo era.
+  // `null` solo si el producto se quedó sin variantes activas con precio.
+  precioDesde: string | null;
   disponible: boolean;
   // Vacío en casi todo el catálogo actual: depende de que el Excel de
   // origen tenga la columna "Material" (ver backend/scripts/import-catalog.ts).
@@ -92,7 +95,7 @@ export interface SearchResultItem {
   nombre: string;
   descripcionCorta: string | null;
   marca: string | null;
-  precioDesde: number;
+  precioDesde: string | null;
   disponible: boolean;
   imagenPrincipal: string | null;
   varianteUnica: VarianteUnica | null;
@@ -118,8 +121,9 @@ export interface BannerSummary {
 export interface CategoryFacets {
   marcas: string[];
   materiales: string[];
-  precioMin: number | null;
-  precioMax: number | null;
+  // NUEVO-03: texto decimal fijo, igual que `precioDesde` del listado.
+  precioMin: string | null;
+  precioMax: string | null;
 }
 
 export interface SitemapEntry {

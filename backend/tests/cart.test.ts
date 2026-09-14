@@ -47,6 +47,29 @@ describe("Carrito", () => {
     expect(res.body.data.cart.items[0].cantidad).toBe(4);
   });
 
+  it("NUEVO-02: el stock reservado por otro checkout no se puede agregar al carrito", async () => {
+    // 5 en existencia, pero las 5 ya están reservadas por otra orden en
+    // curso (Módulo 06) — el stock vendible real es 0.
+    const variant = await createSellableVariant({ stock: 5, cantidadReservada: 5 });
+    const agent = supertest.agent(app);
+
+    const res = await agent.post("/api/cart/items").send({ variantId: variant.id, cantidad: 1 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("OUT_OF_STOCK");
+  });
+
+  it("NUEVO-02: con stock parcialmente reservado, solo se puede agregar lo vendible", async () => {
+    const variant = await createSellableVariant({ stock: 10, cantidadReservada: 8 });
+    const agent = supertest.agent(app);
+
+    const res = await agent.post("/api/cart/items").send({ variantId: variant.id, cantidad: 5 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.limitado).toBe(true);
+    expect(res.body.data.cart.items[0].cantidad).toBe(2);
+  });
+
   it("fusiona el carrito anónimo con el de la cuenta al iniciar sesión", async () => {
     const variant = await createSellableVariant({ stock: 10 });
     const agent = supertest.agent(app);

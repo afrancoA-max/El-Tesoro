@@ -8,7 +8,8 @@ export interface FavoriteItem {
   slug: string;
   nombre: string;
   marca: string | null;
-  precioDesde: number;
+  // NUEVO-03: texto decimal fijo, igual que el resto de la API de dinero.
+  precioDesde: string | null;
   imagenPrincipal: string | null;
 }
 
