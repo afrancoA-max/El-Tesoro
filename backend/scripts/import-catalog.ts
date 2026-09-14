@@ -250,12 +250,13 @@ async function main() {
       where: { externalSource_externalId: { externalSource: EXTERNAL_SOURCE, externalId } },
     });
 
-    // CAT-02: precioDesde/disponible son copias desnormalizadas del precio y
-    // stock — hoy cada producto tiene exactamente una variante (una fila del
-    // Excel = un producto), así que son directamente el precio y la
-    // existencia de esta fila. Si el importador algún día agrupa variantes
-    // (IMP-03), esto debe recalcularse sobre TODAS las variantes del
-    // producto, no solo la de la fila actual.
+    // NUEVO-01: precioDesde/disponible ya NO se escriben aquí a mano — un
+    // trigger de Postgres (migración
+    // 20260914090000_nuevo01_trigger_agregados_producto) las recalcula solo
+    // en cuanto el upsert de variante/inventario de abajo confirma, a partir
+    // de TODAS las variantes activas del producto. Antes esto asumía "una
+    // fila del Excel = un producto = una variante", que se rompía en cuanto
+    // el importador agrupara variantes (IMP-03).
     const product = await prisma.product.upsert({
       where: { externalSource_externalId: { externalSource: EXTERNAL_SOURCE, externalId } },
       update: {
@@ -265,8 +266,6 @@ async function main() {
         categoriaId: categoria.id,
         estado: "activo",
         busqueda,
-        precioDesde: precioRaw,
-        disponible: existencia > 0,
         rawPayload: row as unknown as object,
         syncedAt: new Date(),
       },
@@ -278,8 +277,6 @@ async function main() {
         categoriaId: categoria.id,
         estado: "activo",
         busqueda,
-        precioDesde: precioRaw,
-        disponible: existencia > 0,
         externalSource: EXTERNAL_SOURCE,
         externalId,
         rawPayload: row as unknown as object,
