@@ -3,6 +3,7 @@ import supertest from "supertest";
 import { createTestApp } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
 import { createSellableVariant } from "./helpers/factories";
+import { prisma } from "../src/config/prisma";
 
 // App nueva por test — ver helpers/app.ts (los rate limiters de auth son en
 // memoria por instancia y varias pruebas de este archivo registran/inician
@@ -87,6 +88,49 @@ describe("Carrito", () => {
     // El carrito de la cuenta sigue ahí en una nueva consulta.
     const cart = await agent.get("/api/cart");
     expect(cart.body.data.items).toHaveLength(1);
+  });
+
+  it("NUEVO-05: fusionar respeta el tope de MAX_CANTIDAD, no solo el stock", async () => {
+    const variant = await createSellableVariant({ stock: 500 });
+    const agent = supertest.agent(app);
+
+    // Agrega 60 como invitado (queda la cookie de carrito).
+    await agent.post("/api/cart/items").send({ variantId: variant.id, cantidad: 60 });
+
+    const registerRes = await agent
+      .post("/api/auth/register")
+      .send({ nombre: "Cliente", email: "tope@example.com", password: "clave1234" });
+    await agent.post("/api/auth/login").send({ email: "tope@example.com", password: "clave1234" });
+
+    // La cuenta ya tenía 60 de la misma variante (otra sesión) antes de este
+    // merge — sin el tope, 60 + 60 con 500 en stock daría 120.
+    const userCart = await prisma.cart.create({ data: { userId: registerRes.body.data.user.id } });
+    await prisma.cartItem.create({
+      data: { cartId: userCart.id, variantId: variant.id, cantidad: 60, precioUnitarioCongelado: "100.00" },
+    });
+
+    const merged = await agent.post("/api/cart/merge").send();
+
+    expect(merged.status).toBe(200);
+    expect(merged.body.data.cart.items).toHaveLength(1);
+    expect(merged.body.data.cart.items[0].cantidad).toBe(99);
+  });
+
+  it("NUEVO-05: una línea del carrito anónimo con variante ya desactivada no se fusiona", async () => {
+    const variant = await createSellableVariant({ stock: 10 });
+    const agent = supertest.agent(app);
+
+    await agent.post("/api/cart/items").send({ variantId: variant.id, cantidad: 2 });
+
+    // La variante se desactiva mientras el carrito anónimo seguía dormido
+    // (ej. el producto se descontinuó).
+    await prisma.productVariant.update({ where: { id: variant.id }, data: { activo: false } });
+
+    await registerAndLogin(agent, "descontinuado@example.com");
+    const merged = await agent.post("/api/cart/merge").send();
+
+    expect(merged.status).toBe(200);
+    expect(merged.body.data.cart.items).toHaveLength(0);
   });
 
   it("IDOR: no se puede modificar ni borrar una línea del carrito de otra cuenta (404, no 403)", async () => {

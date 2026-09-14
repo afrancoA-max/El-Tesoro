@@ -348,12 +348,26 @@ export async function mergeAnonymousCart(userId: string, rawCartToken: string | 
 
   await prisma.$transaction(async (tx) => {
     for (const item of anonCart.items) {
-      const [existing, inventory] = await Promise.all([
+      const [existing, variant] = await Promise.all([
         tx.cartItem.findUnique({ where: { cartId_variantId: { cartId: userCart.id, variantId: item.variantId } } }),
-        tx.inventory.findUnique({ where: { variantId: item.variantId } }),
+        tx.productVariant.findUnique({
+          where: { id: item.variantId },
+          include: { product: { select: { estado: true } }, inventory: true },
+        }),
       ]);
-      const stockDisponible = stockVendible(inventory);
-      const cantidadFinal = Math.min((existing?.cantidad ?? 0) + item.cantidad, stockDisponible);
+
+      // NUEVO-05: el carrito anónimo pudo dormir semanas (CART_TOKEN_TTL_MS
+      // son 30 días) — la variante pudo desactivarse o el producto pasar a
+      // borrador/descontinuado mientras tanto. Fusionar esa línea igual
+      // arrastraría un item que ya no se puede ni mostrar en el carrito.
+      if (!variant || !variant.activo || variant.product.estado !== "activo") continue;
+
+      const stockDisponible = stockVendible(variant.inventory);
+      // NUEVO-05: el tope de MAX_CANTIDAD por línea aplica también al
+      // fusionar — antes solo se recortaba contra stock, así que fusionar
+      // dos carritos con la misma variante podía dejar una línea por
+      // encima de 99 si el stock alcanzaba.
+      const cantidadFinal = Math.min((existing?.cantidad ?? 0) + item.cantidad, stockDisponible, MAX_CANTIDAD);
       if (cantidadFinal <= 0) continue;
 
       await tx.cartItem.upsert({
