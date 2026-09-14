@@ -191,8 +191,9 @@ export async function getCategoryFacets(categorySlug: string): Promise<CategoryF
   return {
     marcas: marcasGroup.map((g) => g.marca).filter((m): m is string => Boolean(m)).sort(),
     materiales: materiales.map((m) => m.valor).sort(),
-    precioMin: precioAgg._min.precioDesde?.toString() ?? null,
-    precioMax: precioAgg._max.precioDesde?.toString() ?? null,
+    // .toFixed(2), no .toString(): decimal.js recorta ceros de cola.
+    precioMin: precioAgg._min.precioDesde?.toFixed(2) ?? null,
+    precioMax: precioAgg._max.precioDesde?.toFixed(2) ?? null,
   };
 }
 
@@ -257,8 +258,10 @@ export async function getProductBySlug(slug: string) {
     variantes: product.variants.map((v) => ({
       id: v.id,
       sku: v.sku,
-      precio: v.precio,
-      precioComparativo: v.precioComparativo,
+      // .toFixed(2), no la Decimal cruda: su toJSON usa toString(), que
+      // recorta ceros de cola ("150" en vez de "150.00").
+      precio: v.precio.toFixed(2),
+      precioComparativo: v.precioComparativo?.toFixed(2) ?? null,
       activo: v.activo,
       disponible: stockVendible(v.inventory) > 0,
       // CAR-03/NUEVO-02: la ficha necesita el stock VENDIBLE real (no solo

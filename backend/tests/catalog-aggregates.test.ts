@@ -35,7 +35,8 @@ describe("Trigger de agregados de producto (NUEVO-01)", () => {
     const { product } = await createProductWithVariant({ precio: "150.00", cantidadDisponible: 3 });
 
     const refreshed = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
-    expect(refreshed.precioDesde?.toString()).toBe("150.00");
+    // .toFixed(2), no .toString(): decimal.js recorta ceros de cola.
+    expect(refreshed.precioDesde?.toFixed(2)).toBe("150.00");
     expect(refreshed.disponible).toBe(true);
   });
 
@@ -83,6 +84,6 @@ describe("Trigger de agregados de producto (NUEVO-01)", () => {
     await prisma.inventory.create({ data: { variantId: baratita.id, cantidadDisponible: 1 } });
 
     const refreshed = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
-    expect(refreshed.precioDesde?.toString()).toBe("99.50");
+    expect(refreshed.precioDesde?.toFixed(2)).toBe("99.50");
   });
 });

@@ -70,8 +70,11 @@ function emptyCartView(): CartView {
 
 function toCartView(cart: CartWithDetails): CartView {
   const items: CartItemView[] = cart.items.map((item) => {
-    const precioActual = item.variant.precio.toString();
-    const precioCongelado = item.precioUnitarioCongelado.toString();
+    // .toFixed(2), no .toString(): decimal.js recorta ceros de cola
+    // ("150" en vez de "150.00") — CAR-05 exige texto decimal fijo de 2
+    // posiciones siempre, con precio redondo o no.
+    const precioActual = item.variant.precio.toFixed(2);
+    const precioCongelado = item.precioUnitarioCongelado.toFixed(2);
     // NUEVO-02: stock vendible (cantidadDisponible - cantidadReservada), no
     // cantidadDisponible sola — en cuanto el Módulo 06 empiece a reservar,
     // esto ya respeta lo que otro checkout en curso se está llevando.
