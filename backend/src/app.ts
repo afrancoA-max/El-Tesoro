@@ -12,6 +12,16 @@ import { errorHandlerMiddleware } from "./middlewares/errorHandler.middleware";
 export function createApp() {
   const app = express();
 
+  // NUEVO-04: explícito (Express ya trae `false` por defecto) — este backend
+  // nunca habla directo con el navegador, siempre detrás del proxy same-origin
+  // de Next (frontend/src/app/api/[...path]/route.ts), que es quien resuelve
+  // la IP real del cliente y la manda en el header propio `x-internal-client-ip`
+  // (ver rateLimit.middleware.ts). `req.ip`/`X-Forwarded-For` de Express nunca
+  // deben ser la fuente de verdad de la IP aquí — dejarlo en `true` permitiría
+  // que cualquiera que le hable directo al backend (saltándose el proxy)
+  // falsee su IP en un header que Express sí respetaría.
+  app.set("trust proxy", false);
+
   // SEG-09: la API solo responde JSON (nunca HTML), así que los defaults
   // de helmet (X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
   // etc.) aplican sin necesitar una CSP a medida.

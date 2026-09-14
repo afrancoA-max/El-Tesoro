@@ -31,6 +31,15 @@ function ipKeyGeneratorFor(req: Request): string {
   return resolveClientIp(req);
 }
 
+/// NUEVO-04: `express-rate-limit` valida por defecto que si llega un header
+/// `X-Forwarded-For` (algo que el proxy de Next SIEMPRE reenvía tal cual,
+/// junto con nuestro `x-internal-client-ip` propio) `trust proxy` esté
+/// habilitado — si no, lo trata como una posible mala configuración. Aquí es
+/// un falso positivo a propósito: `resolveClientIp` arriba nunca lee
+/// `X-Forwarded-For` ni depende de `trust proxy`/`req.ip`, así que esa
+/// validación no aplica y solo ensuciaría los logs.
+const RATE_LIMIT_VALIDATE = { xForwardedForHeader: false };
+
 // INF-04: estos limiters son singletons de módulo (su contador vive en
 // memoria mientras dure el proceso) — en las pruebas de integración, todas
 // las requests salen de la misma IP y varias pruebas legítimas y sin
@@ -48,6 +57,7 @@ function skipInTests(): boolean {
 /// el store a Redis.
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
+  validate: RATE_LIMIT_VALIDATE,
   limit: 10,
   standardHeaders: true,
   skip: skipInTests,
@@ -61,6 +71,7 @@ export const loginRateLimiter = rateLimit({
 /// probar contraseñas de una sola cuenta objetivo desde IPs distintas.
 export const loginEmailRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
+  validate: RATE_LIMIT_VALIDATE,
   limit: 5,
   standardHeaders: true,
   skip: skipInTests,
@@ -74,6 +85,7 @@ export const loginEmailRateLimiter = rateLimit({
 
 export const registerRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
+  validate: RATE_LIMIT_VALIDATE,
   limit: 5,
   standardHeaders: true,
   skip: skipInTests,
@@ -84,6 +96,7 @@ export const registerRateLimiter = rateLimit({
 
 export const newsletterRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
+  validate: RATE_LIMIT_VALIDATE,
   limit: 5,
   standardHeaders: true,
   skip: skipInTests,
@@ -94,6 +107,7 @@ export const newsletterRateLimiter = rateLimit({
 
 export const passwordResetRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
+  validate: RATE_LIMIT_VALIDATE,
   limit: 5,
   standardHeaders: true,
   skip: skipInTests,

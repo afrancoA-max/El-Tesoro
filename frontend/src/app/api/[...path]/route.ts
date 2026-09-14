@@ -15,14 +15,20 @@ const INTERNAL_PROXY_SECRET = process.env.INTERNAL_PROXY_SECRET ?? "";
 
 export const dynamic = "force-dynamic";
 
-/// La IP del navegador llega en el `X-Forwarded-For` que pone el balanceador
-/// de Google delante de Cloud Run — Next solo lee el primer valor, nunca
-/// confía en uno que el propio cliente pudiera mandar (se sobreescribe, no
-/// se agrega).
+/// NUEVO-04: la IP del navegador llega en el `X-Forwarded-For` que pone el
+/// balanceador de Google delante de Cloud Run — pero el balanceador
+/// AGREGA su valor al final de la lista, nunca la sobreescribe. Comprobado
+/// en staging (2026-09-14): mandar `X-Forwarded-For: 6.6.6.6` a mano hizo
+/// que el header llegara como "6.6.6.6,<IP real>" — el primer valor es
+/// exactamente el que un atacante puede inventar para esquivar el límite
+/// de intentos de login por IP. Por eso se toma el ÚLTIMO valor, no el
+/// primero.
 function resolveClientIp(request: NextRequest): string | null {
   const forwardedFor = request.headers.get("x-forwarded-for");
-  const first = forwardedFor?.split(",")[0]?.trim();
-  return first || null;
+  if (!forwardedFor) return null;
+  const parts = forwardedFor.split(",").map((part) => part.trim());
+  const last = parts[parts.length - 1];
+  return last || null;
 }
 
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
