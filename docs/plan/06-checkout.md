@@ -44,3 +44,35 @@
 - **Cupones/descuentos en fase 1:** la skill los contempla; confirmar si se lanzan con el sitio o post-lanzamiento (recomendación: post-lanzamiento, para no engordar este módulo).
 - **Política de devoluciones y garantías:** debe existir como texto legal visible en el checkout (electrodomésticos implican garantía). Pedirla al dueño; su ausencia no bloquea la construcción pero sí el lanzamiento (09).
 - **Cristalería frágil:** ¿costo extra de embalaje o política de daños en tránsito? Afecta texto del checkout y costos de envío.
+
+## 7. Decisiones de modelo heredadas del Carrito (NUEVO-02, ya resueltas — no improvisar)
+
+La revisión del 14-sep (`docs/revision/revision-14-sep-pre-modulo-06.md`, hallazgo NUEVO-02) encontró dos huecos entre lo que el Módulo 05 dejó listo y lo que el 06 necesita. Ambos quedan decididos aquí para que el 06 los implemente directo, sin volver a discutirlos:
+
+### 7.1 Qué pasa con el carrito cuando se crea la orden ("carrito convertido")
+
+`Cart.userId` es `@unique` (un usuario tiene como máximo un carrito) y `findCartId`/`resolveOrCreateCartId` (`backend/src/services/cart.service.ts`) no filtran por `estado` — buscan el carrito del usuario sin importar si sigue `activo`. Si el checkout se limitara a marcar el carrito como `convertido` y dejarlo ahí, el usuario no podría volver a comprar: `findCartId` seguiría devolviendo ese mismo carrito "convertido" (con sus líneas viejas) porque `@unique` le impide tener otro.
+
+**Decisión: vaciar y reutilizar, NO crear un carrito nuevo ni quitar el `@unique`.**
+
+Al crear la orden, en la misma transacción que copia las líneas del carrito a `order_items` (snapshot inmutable — ver sección 2):
+
+1. Copiar cada `CartItem` a `order_items` con su `precioUnitarioCongelado`.
+2. Borrar todas las `CartItem` del carrito (`cart.items`).
+3. Dejar `Cart.estado` en `activo` (nunca queda en `convertido` de forma persistente — es un carrito vacío, activo, listo para la próxima compra).
+
+Razones:
+
+- No requiere ninguna migración de esquema (`@unique` se queda, `findCartId` no cambia) — el bug de NUEVO-02 desaparece porque nunca existe un carrito "convertido" que `findCartId` pueda devolver por error.
+- El historial de qué compró el usuario vive en `orders`/`order_items` (fuente de verdad para "Mis pedidos"), no en el carrito — el carrito nunca tuvo que ser un registro histórico.
+- Evita la alternativa de quitar `@unique` y manejar "¿cuál de los carritos del usuario es el activo?" en cada query — más superficie de bugs por el mismo resultado.
+
+El enum `CartStatus` se queda igual (`activo`/`convertido`/`abandonado`) por si un futuro proceso batch necesita marcar carritos abandonados para métricas, pero el flujo de checkout normal nunca deja un carrito en `convertido` más allá de la transacción misma.
+
+### 7.2 Definición única de "stock vendible"
+
+**Decisión: `stock vendible = Inventory.cantidadDisponible − Inventory.cantidadReservada`, nunca `cantidadDisponible` sola.**
+
+Ya implementado como `stockVendible()` en `shared/src/inventory.ts` y usado por carrito, ficha, listados, búsqueda y colecciones (NUEVO-02, resuelto en Lote G) — el Módulo 06 no tiene que definirlo, solo **escribir** en `cantidadReservada` al reservar/liberar stock (sección 7 de la skill `retail-cart-checkout`) y dejar que ese mismo helper (y el trigger de Postgres que mantiene `Product.disponible`, ver `backend/prisma/migrations/20260914090000_nuevo01_trigger_agregados_producto`) reflejen la reserva en todo el sitio sin tocar cada endpoint de catálogo otra vez.
+
+Al reservar (paso 5 de la sección 4 de la skill de checkout), mover la cantidad de `cantidadDisponible` a `cantidadReservada` en una transacción — nunca en dos sentencias separadas — y usar la misma `cantidadReservada` para la expiración: un job (o consulta al momento de reservar) que libere de vuelta a `cantidadDisponible` las reservas cuya orden pasó el tiempo configurado (sección 6) sin confirmarse.
