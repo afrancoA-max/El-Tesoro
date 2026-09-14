@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import supertest from "supertest";
+import jwt from "jsonwebtoken";
 import { createTestApp } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
 import { createSellableVariant } from "./helpers/factories";
 import { prisma } from "../src/config/prisma";
+import { env } from "../src/config/env";
 
 // App nueva por test — ver helpers/app.ts (los rate limiters de auth son en
 // memoria por instancia y varias pruebas de este archivo registran/inician
@@ -156,5 +158,54 @@ describe("Carrito", () => {
     const ownerCart = await ownerAgent.get("/api/cart");
     expect(ownerCart.body.data.items).toHaveLength(1);
     expect(ownerCart.body.data.items[0].cantidad).toBe(1);
+  });
+
+  it("NUEVO-08/CAR-11: avisa cuando el precio cambió y 'Entendido' lo acepta como el nuevo congelado", async () => {
+    const variant = await createSellableVariant({ stock: 10, precio: "100.00" });
+    const agent = supertest.agent(app);
+
+    const added = await agent.post("/api/cart/items").send({ variantId: variant.id, cantidad: 1 });
+    const itemId = added.body.data.cart.items[0].id;
+    expect(added.body.data.cart.items[0].precioCambio).toBe(false);
+    expect(added.body.data.cart.items[0].precioAnteriorCongelado).toBeNull();
+
+    // El precio de la variante sube después de agregarla al carrito (ej. un
+    // ajuste del importador/admin) — el congelado del carrito sigue en 100.
+    await prisma.productVariant.update({ where: { id: variant.id }, data: { precio: "120.00" } });
+
+    const cart = await agent.get("/api/cart");
+    expect(cart.body.data.items[0].precioCambio).toBe(true);
+    expect(cart.body.data.items[0].precioAnteriorCongelado).toBe("100.00");
+    expect(cart.body.data.items[0].precioUnitario).toBe("120.00");
+
+    const acknowledged = await agent.post(`/api/cart/items/${itemId}/acknowledge-price`).send();
+
+    expect(acknowledged.status).toBe(200);
+    expect(acknowledged.body.data.cart.items[0].precioCambio).toBe(false);
+    expect(acknowledged.body.data.cart.items[0].precioAnteriorCongelado).toBeNull();
+    expect(acknowledged.body.data.cart.items[0].precioUnitario).toBe("120.00");
+  });
+
+  it("NUEVO-08/CAR-01: un access token vencido pone el header X-Access-Token-Expired, sin romper la petición", async () => {
+    const registerRes = await supertest(app)
+      .post("/api/auth/register")
+      .send({ nombre: "Cliente", email: "vencido@example.com", password: "clave1234" });
+    const userId = registerRes.body.data.user.id;
+
+    // Token ya vencido (exp en el pasado) firmado con el mismo secreto que
+    // usa optionalAuth.middleware.ts — simula que el access token expiró
+    // mientras la pestaña seguía abierta. Se manda solo (sin agent, sin
+    // cookie de carrito) para no depender de cómo supertest fusiona un
+    // Cookie header manual con el jar del agente.
+    const expiredToken = jwt.sign({ sub: userId, role: "customer" }, env.jwtAccessSecret, { expiresIn: -10 });
+
+    const res = await supertest(app).get("/api/cart").set("Cookie", [`eltesoro_at=${expiredToken}`]);
+
+    // Sigue respondiendo 200 como invitado (CAR-01: un token vencido nunca
+    // rompe la petición) pero avisa con el header para que el cliente HTTP
+    // refresque antes de degradar la sesión en silencio.
+    expect(res.status).toBe(200);
+    expect(res.headers["x-access-token-expired"]).toBe("1");
+    expect(res.body.data.items).toHaveLength(0);
   });
 });
