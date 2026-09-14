@@ -4,6 +4,11 @@ import { prisma } from "../../src/config/prisma";
 // CASCADE en una sola sentencia es más simple y más rápido que borrar en
 // orden de dependencias, y no falla si una tabla ya está vacía.
 const TABLES = [
+  "order_items",
+  "orders",
+  "order_counters",
+  "shipping_rates",
+  "settings",
   "cart_items",
   "carts",
   "banners",

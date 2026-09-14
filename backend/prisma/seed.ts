@@ -9,6 +9,7 @@
 // cuando la jerarquía real se confirme.
 
 import { PrismaClient } from "@prisma/client";
+import { DEPARTAMENTOS_GT } from "@el-tesoro/shared";
 
 const prisma = new PrismaClient();
 
@@ -236,9 +237,73 @@ async function seedSampleProduct() {
   void productImage;
 }
 
+// Módulo 06 — Checkout. Tarifas PLACEHOLDER por tramo de distancia desde la
+// capital (el negocio confirmó "por departamento", no plana ni por peso —
+// docs/plan/06-checkout.md sección 6 — pero todavía no dio montos reales
+// por transportista). Ajustables después vía `shipping_rates` sin migrar
+// nada; este seed solo deja el checkout demostrable en staging.
+const TRAMO_CERCANO = ["Sacatepéquez", "Chimaltenango", "Escuintla", "Santa Rosa", "El Progreso"];
+const TRAMO_MEDIO = [
+  "Sololá",
+  "Totonicapán",
+  "Quetzaltenango",
+  "Suchitepéquez",
+  "Retalhuleu",
+  "Jalapa",
+  "Jutiapa",
+  "Zacapa",
+  "Chiquimula",
+  "Baja Verapaz",
+];
+const TRAMO_LEJANO = ["San Marcos", "Huehuetenango", "Quiché", "Alta Verapaz", "Petén", "Izabal"];
+
+function tarifaPorTramo(departamento: string): { cargoExpreso: string; forza: string } {
+  if (departamento === "Guatemala") return { cargoExpreso: "25.00", forza: "28.00" };
+  if (TRAMO_CERCANO.includes(departamento)) return { cargoExpreso: "35.00", forza: "38.00" };
+  if (TRAMO_MEDIO.includes(departamento)) return { cargoExpreso: "45.00", forza: "48.00" };
+  if (TRAMO_LEJANO.includes(departamento)) return { cargoExpreso: "55.00", forza: "60.00" };
+  return { cargoExpreso: "45.00", forza: "48.00" };
+}
+
+async function seedShippingAndSettings() {
+  for (const { nombre } of DEPARTAMENTOS_GT) {
+    const { cargoExpreso, forza } = tarifaPorTramo(nombre);
+
+    await prisma.shippingRate.upsert({
+      where: { transportista_departamento: { transportista: "cargo_expreso", departamento: nombre } },
+      update: { costo: cargoExpreso },
+      create: { transportista: "cargo_expreso", departamento: nombre, costo: cargoExpreso },
+    });
+
+    await prisma.shippingRate.upsert({
+      where: { transportista_departamento: { transportista: "forza", departamento: nombre } },
+      update: { costo: forza },
+      create: { transportista: "forza", departamento: nombre, costo: forza },
+    });
+  }
+
+  // Confirmado con el negocio (14-sep): Q1000, parametrizable porque puede
+  // variar en ciertos meses — ver shipping.service.ts.
+  await prisma.setting.upsert({
+    where: { clave: "envio_gratis_umbral" },
+    update: {},
+    create: { clave: "envio_gratis_umbral", valor: "1000.00" },
+  });
+
+  // Confirmado con el negocio (14-sep): sin credenciales de Neonet todavía,
+  // el checkout arranca en modo "solo cotizar" — ver paymentConfig.service.ts.
+  // `update: {}` para no pisar el valor si alguien ya lo activó a mano.
+  await prisma.setting.upsert({
+    where: { clave: "pagos_en_linea_habilitado" },
+    update: {},
+    create: { clave: "pagos_en_linea_habilitado", valor: "false" },
+  });
+}
+
 async function main() {
   await seedTaxonomy();
   await seedSampleProduct();
+  await seedShippingAndSettings();
 }
 
 main()

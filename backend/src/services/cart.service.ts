@@ -180,6 +180,56 @@ export async function getCartView(cartId: string): Promise<CartView> {
   return toCartView(cart);
 }
 
+export interface CheckoutCartItem {
+  id: string;
+  variantId: string;
+  cantidad: number;
+  // Precio ACTUAL de la variante (nunca el congelado del carrito) — el
+  // checkout nunca confía en un precio que pudo haberse fijado hace días.
+  precio: string;
+  stockDisponible: number;
+  nombreProducto: string;
+  sku: string;
+  imagen: string | null;
+  atributos: { tipo: string; valor: string }[];
+  disponible: boolean;
+}
+
+export interface CheckoutCart {
+  cartId: string;
+  items: CheckoutCartItem[];
+}
+
+/// Vista del carrito para el Módulo 06 (creación de orden): a diferencia de
+/// `getCartView`, no recorta cantidades ni oculta el stock real — el
+/// servicio de órdenes necesita los números crudos para decidir si puede
+/// reservar o debe rechazar el checkout con un mensaje por producto.
+export async function getCartForCheckout(ctx: CartContext): Promise<CheckoutCart | null> {
+  const cartId = await findCartId(ctx);
+  if (!cartId) return null;
+
+  const cart = await prisma.cart.findUnique({ where: { id: cartId }, ...cartWithDetails });
+  if (!cart || cart.items.length === 0) return null;
+
+  const items: CheckoutCartItem[] = cart.items.map((item) => ({
+    id: item.id,
+    variantId: item.variantId,
+    cantidad: item.cantidad,
+    precio: item.variant.precio.toFixed(2),
+    stockDisponible: stockVendible(item.variant.inventory),
+    nombreProducto: item.variant.product.nombre,
+    sku: item.variant.sku,
+    imagen: item.variant.images[0]?.url ?? item.variant.product.images[0]?.url ?? null,
+    atributos: item.variant.atributos.map((a) => ({
+      tipo: a.attributeValue.attributeType.nombre,
+      valor: a.attributeValue.valor,
+    })),
+    disponible: item.variant.activo && item.variant.product.estado === "activo",
+  }));
+
+  return { cartId: cart.id, items };
+}
+
 async function getVariantForCart(variantId: string) {
   const variant = await prisma.productVariant.findUnique({
     where: { id: variantId },

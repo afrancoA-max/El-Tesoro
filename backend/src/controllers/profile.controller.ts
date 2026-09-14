@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { updateProfileSchema } from "../validators/profile.validator";
 import * as authService from "../services/auth.service";
 import * as usersService from "../services/users.service";
+import * as orderService from "../services/order.service";
 
 export async function getProfileController(req: Request, res: Response, next: NextFunction) {
   try {
@@ -22,10 +23,12 @@ export async function updateProfileController(req: Request, res: Response, next:
   }
 }
 
-/// "Mis pedidos" (checklist del módulo 04): estructura y endpoint listos
-/// mostrando vacío. El módulo 06 (checkout/pedidos) le agrega contenido
-/// real — este handler solo evita que el frontend necesite un modelo de
-/// Order que todavía no existe.
-export async function listMyOrdersController(_req: Request, res: Response) {
-  res.json({ success: true, data: { items: [], total: 0 } });
+/// "Mis pedidos" (checklist del módulo 04, contenido real del módulo 06).
+export async function listMyOrdersController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await orderService.listMyOrders(req.user!.id);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
 }

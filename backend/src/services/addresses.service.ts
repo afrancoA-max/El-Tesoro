@@ -48,6 +48,14 @@ async function findOwned(userId: string, addressId: string) {
   return address;
 }
 
+/// Usado por el checkout (Módulo 06) cuando el usuario con sesión elige una
+/// dirección guardada en vez de escribir una nueva — mismo criterio 404 que
+/// el resto de este servicio si la dirección no existe o no es suya.
+export async function getAddressForCheckout(userId: string, addressId: string): Promise<SharedAddress> {
+  const address = await findOwned(userId, addressId);
+  return toShared(address);
+}
+
 export async function createAddress(userId: string, input: AddressInput): Promise<SharedAddress> {
   const count = await prisma.address.count({ where: { userId } });
   if (count >= MAX_ADDRESSES_PER_USER) {

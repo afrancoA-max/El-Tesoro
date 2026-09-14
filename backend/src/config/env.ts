@@ -73,6 +73,23 @@ export const env = {
   // cambio, nunca peor).
   internalProxySecret: process.env.INTERNAL_PROXY_SECRET ?? "",
 
+  // Módulo 06 — Checkout. Minutos que dura la reserva de stock de una orden
+  // en `pendiente_pago` antes de liberarse sola. Configurable por variable
+  // de entorno para poder "acelerar" la expiración en staging sin tocar
+  // código (checklist del módulo 06).
+  stockReservationTtlMinutes: Number(process.env.STOCK_RESERVATION_TTL_MINUTES ?? 60),
+  // Cada cuánto corre el barrido que libera reservas expiradas.
+  stockReservationSweepIntervalMs: Number(process.env.STOCK_RESERVATION_SWEEP_INTERVAL_MS ?? 30_000),
+
+  // Credenciales de Neonet (pasarela de pago) — reservadas para el Módulo
+  // 07/de pagos. Vacías a propósito: el negocio no las tiene todavía y el
+  // checkout no las lee en ningún lado mientras `pagos_en_linea_habilitado`
+  // (paymentConfig.service.ts) esté en false. Nunca hardcodear un valor de
+  // respaldo real aquí — solo strings vacíos.
+  neonetApiUrl: process.env.NEONET_API_URL ?? "",
+  neonetApiKey: process.env.NEONET_API_KEY ?? "",
+  neonetMerchantId: process.env.NEONET_MERCHANT_ID ?? "",
+
   brevoApiKey: process.env.BREVO_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "no-responder@eltesoro.gt",
   emailFromName: process.env.EMAIL_FROM_NAME ?? "Almacén El Tesoro",

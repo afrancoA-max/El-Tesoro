@@ -143,6 +143,7 @@ model ProductVariant {
   images    ProductImage[]          @relation("VariantImages")
   inventory Inventory?
   cartItems CartItem[]
+  orderItems OrderItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -308,6 +309,7 @@ model User {
   passwordResetTokens      PasswordResetToken[]
   refreshTokens            RefreshToken[]
   cart                     Cart?
+  orders                   Order[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -461,6 +463,163 @@ model CartItem {
 // Si no hay ningún banner activo, el home usa el comportamiento automático
 // (bloques armados con fotos de producto) que ya tenía.
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Módulo 06 — Checkout. Crea la orden y reserva stock; se detiene antes del
+// cobro (docs/plan/06-checkout.md). Decisiones de negocio del 14-sep:
+// transportistas Cargo Expreso y Forza con tarifa por departamento, recoger
+// en tienda gratis, envío gratis desde un monto parametrizable (`settings`),
+// reserva de stock 60 minutos, sin cupones en fase 1.
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  pendiente_pago
+  pagado
+  en_preparacion
+  enviado
+  entregado
+  cancelado
+}
+
+enum ShippingCarrier {
+  cargo_expreso
+  forza
+}
+
+/// Tarifa de envío a domicilio por transportista + departamento (decisión
+/// del 14-sep: tarifa por departamento, no plana ni por peso). "Recoger en
+/// tienda" no tiene fila aquí — su costo es 0 por definición, ver
+/// shipping.service.ts.
+model ShippingRate {
+  id            String          @id @default(uuid())
+  transportista ShippingCarrier
+  departamento  String
+  costo         Decimal         @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([transportista, departamento])
+  @@map("shipping_rates")
+}
+
+/// Ajustes de negocio de valor simple (clave/valor), parametrizables sin
+/// desplegar código. Primer uso: `envio_gratis_umbral` (monto de subtotal a
+/// partir del cual el envío es gratis — puede variar según temporada, según
+/// el negocio).
+model Setting {
+  clave String @id
+  valor String
+
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+/// Contador atómico del correlativo de orden por año (`AET-2026-00001`).
+/// Una fila por año; se incrementa dentro de la misma transacción que crea
+/// la orden — ver utils/orderNumber.ts.
+model OrderCounter {
+  anio   Int @id
+  ultimo Int @default(0)
+
+  @@map("order_counters")
+}
+
+/// Orden creada al final del checkout (docs/plan/06-checkout.md sección 2).
+/// Snapshot completo de precios/productos/envío/facturación al momento de
+/// comprar — nunca cambia si el catálogo cambia después. Se detiene antes
+/// del cobro: nace en `pendiente_pago` y el Módulo 07 la mueve de ahí.
+model Order {
+  id     String @id @default(uuid())
+  numero String @unique
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Checkout de invitado (skill retail-cart-checkout, sección 5): contacto
+  /// mínimo para poder ubicar/contactar la orden sin cuenta.
+  invitadoEmail    String?
+  invitadoTelefono String?
+
+  estado            OrderStatus @default(pendiente_pago)
+  /// Motivo cuando `estado = cancelado` (ej. "expirada_reserva"). Informativo,
+  /// no maneja lógica — la lógica real de expiración vive en
+  /// order.service.ts.
+  motivoCancelacion String?
+
+  /// Datos de facturación FEL (NIT o "CF" + nombre/razón social) — viajan
+  /// con la orden; la emisión de la factura es del Módulo 07.
+  facturacionNit    String
+  facturacionNombre String
+
+  /// "recoger_tienda" | "cargo_expreso" | "forza" — snapshot del nombre para
+  /// mostrarlo igual aunque cambie después la tarifa o el catálogo de
+  /// métodos.
+  metodoEnvioCodigo String
+  metodoEnvioNombre String
+  /// Snapshot de la dirección de envío (igual forma que Address). Null si el
+  /// método fue "recoger_tienda".
+  direccionEnvio    Json?
+
+  // CAR-05/06: todo monto en Decimal(10,2), calculado con shared/src/money.ts
+  // y expuesto por la API como texto decimal fijo — nunca number.
+  subtotal   Decimal @db.Decimal(10, 2)
+  costoEnvio Decimal @db.Decimal(10, 2)
+  descuento  Decimal @db.Decimal(10, 2) @default(0)
+  total      Decimal @db.Decimal(10, 2)
+  /// IVA ya incluido en los precios (práctica GT) — este campo es solo el
+  /// desglose informativo para el resumen/recibo, no se suma al total.
+  ivaIncluidoInformativo Decimal @db.Decimal(10, 2)
+
+  /// Token opaco (mismo patrón que el carrito, ver utils/tokens.ts) que
+  /// permite a un invitado sin cuenta consultar su propia orden después de
+  /// crearla. Solo se guarda el hash; el valor crudo se entrega una vez en
+  /// la respuesta de creación.
+  accessTokenHash String? @unique
+
+  /// Null cuando la reserva ya no aplica (orden pagada/cancelada/expirada).
+  fechaExpiracionReserva DateTime?
+  /// true una vez que la reserva de esta orden ya se liberó (por expiración
+  /// o cancelación) — evita liberar dos veces la misma cantidad.
+  reservaLiberada        Boolean   @default(false)
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([estado, fechaExpiracionReserva])
+  @@map("orders")
+}
+
+/// Línea de orden: snapshot inmutable copiado de `CartItem` al momento de
+/// crear la orden (docs/plan/06-checkout.md sección 7.1) — nunca se relee del
+/// catálogo después. `variantId` es opcional para no atar el historial de
+/// compras a que la variante siga existiendo.
+model OrderItem {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  nombreProducto String
+  sku            String
+  imagenUrl      String?
+  atributos      Json?
+
+  cantidad       Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  subtotal       Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_items")
+}
 
 model Banner {
   id        String   @id @default(uuid())

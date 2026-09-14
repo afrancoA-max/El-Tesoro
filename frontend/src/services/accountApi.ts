@@ -1,4 +1,4 @@
-import { PublicUser, Address } from "@el-tesoro/shared";
+import { PublicUser, Address, OrderSummaryView } from "@el-tesoro/shared";
 import { apiRequest } from "./httpClient";
 
 // Servicio de dominio para cuentas/autenticación. El cliente HTTP en sí
@@ -79,8 +79,8 @@ export function deleteAddress(id: string) {
   return request<void>(`/account/addresses/${id}`, { method: "DELETE" });
 }
 
-// --- Pedidos (Módulo 04: solo estructura; contenido real desde el Módulo 06) ---
+// --- Pedidos ---
 
 export function listMyOrders() {
-  return request<{ items: unknown[]; total: number }>("/account/orders");
+  return request<{ items: OrderSummaryView[]; total: number }>("/account/orders");
 }
