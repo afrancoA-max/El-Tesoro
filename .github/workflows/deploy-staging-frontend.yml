@@ -33,6 +33,9 @@ env:
   PRODUCT_IMAGES_BUCKET: eltesoro-product-images-staging
   WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
   DEPLOYER_SA: "eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
+  # INF-02: identidad de EJECUCIÓN, separada del deployer — ver el mismo
+  # comentario en deploy-staging.yml.
+  RUNTIME_SA: "eltesoro-runtime@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
 
 permissions:
   contents: read
@@ -114,7 +117,7 @@ jobs:
             --set-env-vars="API_PROXY_TARGET=${{ env.API_ORIGIN }},PRODUCT_IMAGES_BUCKET=${{ env.PRODUCT_IMAGES_BUCKET }}" \
             --set-secrets=INTERNAL_PROXY_SECRET=eltesoro-internal-proxy-secret:latest \
             --min-instances=0 --max-instances=3 --memory=512Mi \
-            --service-account="${{ env.DEPLOYER_SA }}"
+            --service-account="${{ env.RUNTIME_SA }}"
 
       - name: URL del servicio
         run: gcloud run services describe ${{ env.SERVICE }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --format="value(status.url)"
