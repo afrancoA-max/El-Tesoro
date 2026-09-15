@@ -59,6 +59,13 @@ export const env = {
 
   // Módulo 04 — Cuentas de usuario.
   frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
+  // Módulo 07 — pagos: URL pública de este backend, para armar
+  // `override_custom_receipt_page`/`override_custom_cancel_page` de Secure
+  // Acceptance — el navegador del cliente vuelve directo aquí después de
+  // pagar en la página hospedada de CyberSource (nunca pasa por el proxy
+  // de Next). En local, localhost funciona porque es el navegador del
+  // propio desarrollador el que hace esa redirección, no un servidor.
+  backendUrl: process.env.BACKEND_URL ?? `http://localhost:${Number(process.env.PORT ?? 8080)}`,
   jwtAccessSecret: requiredSecret("JWT_ACCESS_SECRET", 32, "dev-access-secret-cambiar-en-produccion"),
   jwtAccessTtlMinutes: Number(process.env.JWT_ACCESS_TTL_MINUTES ?? 15),
   refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 30),
@@ -81,14 +88,20 @@ export const env = {
   // Cada cuánto corre el barrido que libera reservas expiradas.
   stockReservationSweepIntervalMs: Number(process.env.STOCK_RESERVATION_SWEEP_INTERVAL_MS ?? 30_000),
 
-  // Credenciales de Neonet (pasarela de pago) — reservadas para el Módulo
-  // 07/de pagos. Vacías a propósito: el negocio no las tiene todavía y el
-  // checkout no las lee en ningún lado mientras `pagos_en_linea_habilitado`
-  // (paymentConfig.service.ts) esté en false. Nunca hardcodear un valor de
-  // respaldo real aquí — solo strings vacíos.
-  neonetApiUrl: process.env.NEONET_API_URL ?? "",
-  neonetApiKey: process.env.NEONET_API_KEY ?? "",
-  neonetMerchantId: process.env.NEONET_MERCHANT_ID ?? "",
+  // Módulo 07 — pagos (CyberSource/VisaNet, Secure Acceptance Hosted
+  // Checkout — el método que Neonet pidió instalar). Vacías a propósito:
+  // mientras `pagos_en_linea_habilitado` (paymentConfig.service.ts) esté en
+  // false nada las lee. Cuando esté en true, cybersourceAdapter.ts es quien
+  // exige que no estén vacías (no aquí, para no romper el arranque en
+  // entornos donde el pago sigue apagado). Nunca hardcodear un valor de
+  // respaldo real — solo strings vacíos.
+  cybersourceEnv: process.env.CYBERSOURCE_ENV ?? "sandbox",
+  cybersourceProfileId: process.env.CYBERSOURCE_PROFILE_ID ?? "",
+  cybersourceAccessKey: process.env.CYBERSOURCE_ACCESS_KEY ?? "",
+  // El Secret Key de Secure Acceptance firma tanto el formulario saliente
+  // como la respuesta entrante (reply/IPN) — a diferencia de la API REST
+  // v2, aquí no hay un secreto de webhook separado.
+  cybersourceSecretKey: process.env.CYBERSOURCE_SECRET_KEY ?? "",
 
   brevoApiKey: process.env.BREVO_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "no-responder@eltesoro.gt",

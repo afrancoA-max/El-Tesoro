@@ -59,6 +59,19 @@ export async function sendPasswordResetEmail(to: string, nombre: string, resetUr
   );
 }
 
+/// Módulo 07 — pagos: correo de confirmación al pagarse la orden (webhook
+/// de CyberSource, ver order.service.ts `markOrderAsPaid`). `total` ya
+/// viene formateado como texto decimal fijo (CAR-05) — nunca number.
+export async function sendOrderConfirmationEmail(to: string, nombre: string, numeroOrden: string, total: string): Promise<void> {
+  await sendEmail(
+    to,
+    `Pedido confirmado ${numeroOrden} — Almacén El Tesoro`,
+    `<p>Hola ${escapeHtml(nombre)},</p>
+     <p>Tu pago fue confirmado y tu pedido <strong>${escapeHtml(numeroOrden)}</strong> por Q${escapeHtml(total)} ya está en preparación.</p>
+     <p>Puedes ver el detalle y el estado de tu pedido en "Mis pedidos" dentro de tu cuenta.</p>`,
+  );
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => {
     switch (char) {

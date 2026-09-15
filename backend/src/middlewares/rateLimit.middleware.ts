@@ -105,6 +105,21 @@ export const newsletterRateLimiter = rateLimit({
   message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos. Intenta de nuevo en unos minutos." } },
 });
 
+/// Módulo 07 — pagos: límite de intentos de cobro por IP+orden, para
+/// frenar *card testing* (probar tarjetas robadas en lote contra el
+/// endpoint de cobro). Más estricto que login porque cada intento fallido
+/// aquí cuesta dinero real en comisiones de la pasarela.
+export const paymentAttemptRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  validate: RATE_LIMIT_VALIDATE,
+  limit: 8,
+  standardHeaders: true,
+  skip: skipInTests,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${ipKeyGeneratorFor(req)}:${req.params.numero ?? ""}`,
+  message: { success: false, error: { code: "TOO_MANY_ATTEMPTS", message: "Demasiados intentos de pago. Intenta de nuevo en unos minutos." } },
+});
+
 export const passwordResetRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   validate: RATE_LIMIT_VALIDATE,

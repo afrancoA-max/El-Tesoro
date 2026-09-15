@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
 import { env } from "./config/env";
 import { apiRouter } from "./routes";
+import { paymentsReturnRouter } from "./routes/public/paymentsReturn.routes";
 import { notFoundMiddleware } from "./middlewares/notFound.middleware";
 import { errorHandlerMiddleware } from "./middlewares/errorHandler.middleware";
 
@@ -37,6 +38,12 @@ export function createApp() {
       credentials: true,
     }),
   );
+  // Módulo 07 — pagos: el reply/IPN de Secure Acceptance llega como
+  // formulario (`application/x-www-form-urlencoded`), no JSON — lleva su
+  // propio parser (ver paymentsReturn.routes.ts), montado antes de que
+  // `notFoundMiddleware`/`apiRouter` decidan qué hacer con la ruta.
+  app.use("/api/payments/secure-acceptance", paymentsReturnRouter);
+
   app.use(express.json());
   app.use(cookieParser());
   app.use(pinoHttp({ logger }));

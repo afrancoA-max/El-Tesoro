@@ -33,12 +33,12 @@ enum ProductRelationType {
 /// categoría > subcategoría) todavía no está aprobada por el negocio, así
 /// que el esquema no la limita a un número fijo de niveles.
 model Category {
-  id          String   @id @default(uuid())
-  slug        String   @unique
+  id          String  @id @default(uuid())
+  slug        String  @unique
   nombre      String
   descripcion String?
   imagenUrl   String?
-  orden       Int      @default(0)
+  orden       Int     @default(0)
 
   parentId String?
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
@@ -55,14 +55,14 @@ model Category {
 
 /// Producto general (concepto). Las variantes vendibles viven en ProductVariant.
 model Product {
-  id                String        @id @default(uuid())
-  slug              String        @unique
-  nombre            String
-  descripcionCorta  String?
-  descripcionLarga  String?
-  marca             String?
-  especificaciones  Json?
-  estado            ProductStatus @default(borrador)
+  id               String        @id @default(uuid())
+  slug             String        @unique
+  nombre           String
+  descripcionCorta String?
+  descripcionLarga String?
+  marca            String?
+  especificaciones Json?
+  estado           ProductStatus @default(borrador)
 
   categoriaId String
   categoria   Category @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
@@ -89,8 +89,8 @@ model Product {
   /// Campos B2B latentes (módulo 11 los activa). Precio mayorista y compra
   /// mínima a nivel de producto; sin uso hasta el portal mayorista, pero
   /// deben existir desde ya para no migrar después.
-  precioMayorista          Decimal? @db.Decimal(10, 2)
-  cantidadMinimaMayorista  Int?
+  precioMayorista         Decimal? @db.Decimal(10, 2)
+  cantidadMinimaMayorista Int?
 
   /// Metadatos de procedencia: el catálogo se poblará desde un API externo
   /// de productos (aún no provisto). Estos campos permiten mapear cada
@@ -101,8 +101,8 @@ model Product {
   rawPayload     Json?
   syncedAt       DateTime?
 
-  variants  ProductVariant[]
-  images    ProductImage[]
+  variants    ProductVariant[]
+  images      ProductImage[]
   collections ProductCollection[]
 
   relatedFrom ProductRelation[] @relation("ProductRelationSource")
@@ -139,10 +139,10 @@ model ProductVariant {
 
   externalId String?
 
-  atributos VariantAttributeValue[]
-  images    ProductImage[]          @relation("VariantImages")
-  inventory Inventory?
-  cartItems CartItem[]
+  atributos  VariantAttributeValue[]
+  images     ProductImage[]          @relation("VariantImages")
+  inventory  Inventory?
+  cartItems  CartItem[]
   orderItems OrderItem[]
 
   createdAt DateTime @default(now())
@@ -187,8 +187,8 @@ model AttributeType {
 }
 
 model AttributeValue {
-  id     String @id @default(uuid())
-  valor  String
+  id    String @id @default(uuid())
+  valor String
 
   attributeTypeId String
   attributeType   AttributeType @relation(fields: [attributeTypeId], references: [id], onDelete: Cascade)
@@ -293,23 +293,23 @@ enum Role {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String
-  nombre       String
-  telefono     String?
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String
+  nombre          String
+  telefono        String?
   /// NIT guatemalteco o "CF" (Consumidor Final). Formato validado en
   /// validators/, no aquí.
-  nit          String?
-  role         Role      @default(customer)
+  nit             String?
+  role            Role      @default(customer)
   emailVerifiedAt DateTime?
 
-  addresses                Address[]
-  emailVerificationTokens  EmailVerificationToken[]
-  passwordResetTokens      PasswordResetToken[]
-  refreshTokens            RefreshToken[]
-  cart                     Cart?
-  orders                   Order[]
+  addresses               Address[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  refreshTokens           RefreshToken[]
+  cart                    Cart?
+  orders                  Order[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -564,10 +564,10 @@ model Order {
 
   // CAR-05/06: todo monto en Decimal(10,2), calculado con shared/src/money.ts
   // y expuesto por la API como texto decimal fijo — nunca number.
-  subtotal   Decimal @db.Decimal(10, 2)
-  costoEnvio Decimal @db.Decimal(10, 2)
-  descuento  Decimal @db.Decimal(10, 2) @default(0)
-  total      Decimal @db.Decimal(10, 2)
+  subtotal               Decimal @db.Decimal(10, 2)
+  costoEnvio             Decimal @db.Decimal(10, 2)
+  descuento              Decimal @default(0) @db.Decimal(10, 2)
+  total                  Decimal @db.Decimal(10, 2)
   /// IVA ya incluido en los precios (práctica GT) — este campo es solo el
   /// desglose informativo para el resumen/recibo, no se suma al total.
   ivaIncluidoInformativo Decimal @db.Decimal(10, 2)
@@ -584,6 +584,27 @@ model Order {
   /// o cancelación) — evita liberar dos veces la misma cantidad.
   reservaLiberada        Boolean   @default(false)
 
+  /// Módulo 07 — pagos. Id de transacción de CyberSource de la captura más
+  /// reciente (la que realmente pagó la orden). El webhook, nunca la
+  /// respuesta síncrona del cobro, es quien lo confirma — ver
+  /// order.service.ts `markOrderAsPaid`.
+  pagoTransactionId String? @unique
+  /// Motivo legible del último rechazo/error de cobro, para poder mostrar
+  /// "vuelve a intentar" en el checkout — la orden sigue en
+  /// `pendiente_pago` (nunca se agrega un estado de pago fallido: es
+  /// simplemente una orden pendiente que ya falló una vez).
+  pagoUltimoError   String?
+
+  /// Módulo 07 — FEL. Interruptor "enchufe listo": mientras no haya
+  /// certificador FEL conectado (fel.service.ts) queda en `pendiente` para
+  /// siempre y nunca bloquea la venta.
+  felEstado      FelStatus @default(pendiente)
+  felNumeroDte   String?
+  felPdfUrl      String?
+  felUltimoError String?
+
+  paymentEvents PaymentEvent[]
+
   items OrderItem[]
 
   createdAt DateTime @default(now())
@@ -592,6 +613,38 @@ model Order {
   @@index([userId])
   @@index([estado, fechaExpiracionReserva])
   @@map("orders")
+}
+
+enum FelStatus {
+  pendiente
+  emitida
+  fallida
+}
+
+/// Bitácora de auditoría de webhooks de pago (skill retail-payments-
+/// integration, sección 5) y mecanismo de idempotencia: `@@unique([proveedor,
+/// eventId])` hace que reprocesar el mismo evento choque con P2002 en vez de
+/// duplicar efectos (descuento de stock, correo, FEL).
+model PaymentEvent {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  proveedor String @default("cybersource")
+  /// Id de notificación del proveedor — único junto con `proveedor`.
+  eventId   String
+  /// Tipo de evento del proveedor, ej. "payments.accept".
+  tipo      String
+  payload   Json
+
+  procesadoOk Boolean
+  error       String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([proveedor, eventId])
+  @@index([orderId])
+  @@map("payment_events")
 }
 
 /// Línea de orden: snapshot inmutable copiado de `CartItem` al momento de
@@ -622,13 +675,13 @@ model OrderItem {
 }
 
 model Banner {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   titulo    String
   subtitulo String?
   imagenUrl String
   enlace    String
-  orden     Int      @default(0)
-  activo    Boolean  @default(true)
+  orden     Int     @default(0)
+  activo    Boolean @default(true)
 
   /// Ambos opcionales: un banner sin fechas está activo indefinidamente
   /// mientras `activo` sea true.

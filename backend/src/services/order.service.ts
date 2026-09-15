@@ -12,6 +12,8 @@ import type { CartContext } from "./cart.service";
 import * as addressesService from "./addresses.service";
 import { resolveShippingCost } from "./shipping.service";
 import type { CreateOrderInput } from "../validators/checkout.validator";
+import { sendOrderConfirmationEmail } from "./email.service";
+import { emitirFacturaFEL } from "./fel.service";
 
 const orderWithItems = Prisma.validator<Prisma.OrderDefaultArgs>()({ include: { items: true } });
 type OrderWithItems = Prisma.OrderGetPayload<typeof orderWithItems>;
@@ -46,6 +48,9 @@ function toOrderView(order: OrderWithItems, accessToken?: string): OrderView {
     total: order.total.toFixed(2),
     ivaIncluidoInformativo: order.ivaIncluidoInformativo.toFixed(2),
     fechaExpiracionReserva: order.fechaExpiracionReserva ? order.fechaExpiracionReserva.toISOString() : null,
+    pagoUltimoError: order.pagoUltimoError,
+    felEstado: order.felEstado,
+    felPdfUrl: order.felPdfUrl,
     ...(accessToken ? { accessToken } : {}),
   };
 }
@@ -218,6 +223,98 @@ export async function getOrderByNumero(numero: string, opts: { userId?: string; 
   const order = await findOrderOr404({ numero });
   assertCanView(order, opts);
   return toOrderView(order);
+}
+
+/// Módulo 07 — pagos: variante de `getOrderByNumero` que devuelve la
+/// entidad completa (no el DTO) para que el controlador de pagos se la
+/// pase al adaptador de CyberSource. Mismo control de dueño que el GET
+/// público — un invitado o usuario ajeno no puede iniciar un cobro sobre
+/// una orden que no es suya.
+export async function getOrderEntityByNumero(numero: string, opts: { userId?: string; rawToken?: string }): Promise<OrderWithItems> {
+  const order = await findOrderOr404({ numero });
+  assertCanView(order, opts);
+  return order;
+}
+
+/// Módulo 07 — pagos: confirma el cobro de una orden. Se llama **solo**
+/// desde el webhook de CyberSource (paymentEvents.service.ts), nunca desde
+/// la respuesta síncrona del cobro — esa es la regla no negociable de la
+/// skill retail-payments-integration, sección 3.
+///
+/// Idempotente: si la orden ya está `pagado` (p. ej. el webhook llegó dos
+/// veces con distinto eventId, o ya se procesó), no repite el descuento de
+/// stock ni reenvía correo/FEL.
+export async function markOrderAsPaid(orderId: string, transactionId: string): Promise<void> {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
+  if (!order) {
+    logger.error({ orderId, transactionId }, "Webhook de pago para una orden que no existe.");
+    return;
+  }
+  if (order.estado === "pagado") {
+    logger.info({ orderId, transactionId }, "Orden ya estaba pagada; webhook ignorado (idempotencia).");
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Convierte la reserva en descuento definitivo (docs/plan/07 sección
+    // 2): la misma cantidad sale de `cantidadDisponible` y de
+    // `cantidadReservada` — nunca solo una de las dos, o el stock vendible
+    // quedaría mal calculado.
+    for (const item of order.items) {
+      if (!item.variantId) continue;
+      await tx.$executeRaw`
+        UPDATE inventory
+        SET "cantidadDisponible" = GREATEST("cantidadDisponible" - ${item.cantidad}, 0),
+            "cantidadReservada" = GREATEST("cantidadReservada" - ${item.cantidad}, 0)
+        WHERE "variantId" = ${item.variantId}
+      `;
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        estado: "pagado",
+        pagoTransactionId: transactionId,
+        pagoUltimoError: null,
+        reservaLiberada: true,
+        fechaExpiracionReserva: null,
+      },
+    });
+  });
+
+  logger.info({ orderId, numero: order.numero, transactionId }, "Orden pagada.");
+
+  // Correo y FEL nunca deben tumbar la confirmación del pago (docs/plan/07
+  // sección 2: "manejo de fallo de emisión sin bloquear la venta") — cada
+  // uno se aísla en su propio try/catch y solo se registra en el log.
+  const nombreCliente = order.facturacionNombre;
+  const correoDestino = order.invitadoEmail ?? (await prisma.user.findUnique({ where: { id: order.userId ?? "" } }))?.email;
+  if (correoDestino) {
+    try {
+      await sendOrderConfirmationEmail(correoDestino, nombreCliente, order.numero, order.total.toFixed(2));
+    } catch (error) {
+      logger.error({ err: error, orderId }, "No se pudo enviar el correo de confirmación de pago.");
+    }
+  }
+
+  try {
+    await emitirFacturaFEL(orderId);
+  } catch (error) {
+    logger.error({ err: error, orderId }, "No se pudo iniciar la emisión de FEL.");
+  }
+}
+
+/// Módulo 07 — pagos: registra un rechazo/error de cobro. La orden sigue
+/// `pendiente_pago` (reserva intacta) para poder reintentar sobre la misma
+/// orden — nunca se agrega un estado "fallido" nuevo (ver plan del módulo).
+/// No-op si la orden ya no está pendiente (p. ej. un rechazo tardío llega
+/// después de que otro intento ya la pagó).
+export async function markOrderPaymentFailed(orderId: string, motivo: string): Promise<void> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order || order.estado !== "pendiente_pago") return;
+
+  await prisma.order.update({ where: { id: orderId }, data: { pagoUltimoError: motivo } });
+  logger.info({ orderId, numero: order.numero, motivo }, "Intento de pago rechazado; orden sigue pendiente y es reintentable.");
 }
 
 export async function listMyOrders(userId: string): Promise<{ items: OrderSummaryView[]; total: number }> {

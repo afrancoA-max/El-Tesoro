@@ -55,11 +55,22 @@ export interface OrderView {
 
   fechaExpiracionReserva: string | null;
 
+  // Módulo 07 — pagos: motivo del último rechazo (si lo hay), para que el
+  // checkout pueda ofrecer "vuelve a intentar" sin inventar texto genérico.
+  pagoUltimoError: string | null;
+
+  // Módulo 07 — FEL ("enchufe"): mientras no haya certificador conectado
+  // queda en "pendiente" y `felPdfUrl` es siempre null.
+  felEstado: FelStatus;
+  felPdfUrl: string | null;
+
   // Solo presente en la respuesta de creación (POST /orders), para que un
   // invitado sin cuenta pueda volver a consultar su propia orden. Nunca se
   // devuelve en listados ni en GET posteriores.
   accessToken?: string;
 }
+
+export type FelStatus = "pendiente" | "emitida" | "fallida";
 
 export interface OrderSummaryView {
   id: string;

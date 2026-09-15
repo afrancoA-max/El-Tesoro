@@ -11,6 +11,7 @@ import { listAddresses } from "@/services/accountApi";
 import { fetchShippingMethods, fetchCheckoutConfig, createOrder, CreateOrderAddressInput } from "@/services/checkoutApi";
 import { ApiError } from "@/services/api";
 import { formatCurrency } from "@/lib/format";
+import { PaymentStep } from "./PaymentStep";
 import formStyles from "@/components/account/Form.module.css";
 import styles from "./page.module.css";
 
@@ -40,6 +41,13 @@ export function CheckoutPageView() {
   const [step, setStep] = useState<Step>(1);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Una vez creada la orden con pago en línea habilitado, el wizard se
+  // reemplaza por el paso de pago (PaymentStep), que redirige por completo
+  // al navegador hacia la página hospedada de CyberSource — nunca se
+  // navega a la confirmación desde aquí, eso lo hace el backend cuando
+  // CyberSource devuelve al cliente (ver payments.controller.ts).
+  const [ordenPagando, setOrdenPagando] = useState<{ numero: string; accessToken?: string } | null>(null);
 
   // Interruptor "solo cotizar" (14-sep: sin credenciales de Neonet
   // todavía). Por defecto asume `false` — el estado real de hoy — así que
@@ -130,6 +138,15 @@ export function CheckoutPageView() {
   const costoEnvio = selectedMethodOption?.disponible ? selectedMethodOption.costo : "0.00";
   const total = (Number(cart.subtotal) + Number(costoEnvio)).toFixed(2);
 
+  if (ordenPagando) {
+    return (
+      <main className={styles.main}>
+        <h1 className={styles.title}>Checkout</h1>
+        <PaymentStep numero={ordenPagando.numero} accessToken={ordenPagando.accessToken} />
+      </main>
+    );
+  }
+
   if (cartStatus === "ready" && cart.items.length === 0) {
     return (
       <main className={styles.main}>
@@ -192,6 +209,13 @@ export function CheckoutPageView() {
         metodoEnvioCodigo: selectedMethodOption.codigo,
       });
       await refreshCart();
+
+      if (pagosEnLineaHabilitado) {
+        setOrdenPagando({ numero: order.numero, accessToken: order.accessToken });
+        setSubmitting(false);
+        return;
+      }
+
       const tokenSuffix = order.accessToken ? `?token=${encodeURIComponent(order.accessToken)}` : "";
       router.push(`/checkout/confirmacion/${order.numero}${tokenSuffix}`);
     } catch (err) {
