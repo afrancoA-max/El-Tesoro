@@ -179,10 +179,9 @@ describe("Módulo 08 — Pedidos: ciclo operativo y cancelación", () => {
     const { cookie, user } = await authCookie("operador", "Operador Dos");
     const order = await createPaidOrder();
 
-    const noSkip = await supertest(app).post(`/api/admin/orders/${order.id}/advance`).set("Cookie", [cookie]).send({ guiaEnvio: "GUIA-1" });
-    expect(noSkip.status).toBe(409); // pagado -> enviado directo no es válido; debe pasar por en_preparacion
-
-    const toPreparing = await supertest(app).post(`/api/admin/orders/${order.id}/advance`).set("Cookie", [cookie]).send({});
+    // "pagado" solo avanza un paso a la vez, sin importar qué se mande en
+    // el body — un guiaEnvio de más no lo salta directo a "enviado".
+    const toPreparing = await supertest(app).post(`/api/admin/orders/${order.id}/advance`).set("Cookie", [cookie]).send({ guiaEnvio: "GUIA-1" });
     expect(toPreparing.status).toBe(200);
     expect(toPreparing.body.data.estado).toBe("en_preparacion");
 
@@ -204,6 +203,10 @@ describe("Módulo 08 — Pedidos: ciclo operativo y cancelación", () => {
     const historial = toDelivered.body.data.historial as Array<{ estadoNuevo: string; adminNombre: string | null }>;
     expect(historial.map((h) => h.estadoNuevo)).toEqual(["en_preparacion", "enviado", "entregado"]);
     expect(historial.every((h) => h.adminNombre === user.nombre)).toBe(true);
+
+    // Ya no hay a dónde avanzar — "entregado" es el final del ciclo.
+    const pastEnd = await supertest(app).post(`/api/admin/orders/${order.id}/advance`).set("Cookie", [cookie]).send({});
+    expect(pastEnd.status).toBe(409);
   });
 
   it("servicio al cliente puede confirmar manualmente un pago pendiente", async () => {
