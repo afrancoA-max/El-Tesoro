@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import { MulterError } from "multer";
 import { AppError } from "../utils/AppError";
 import { logger } from "../config/logger";
 
@@ -33,6 +34,18 @@ export function errorHandlerMiddleware(
         message: error.issues.map((issue) => issue.message).join("; "),
       },
     });
+    return;
+  }
+
+  // Módulo 08: subida de imágenes/Excel del panel admin — un archivo
+  // demasiado grande o de un tipo no soportado es error del cliente, no del
+  // servidor.
+  if (error instanceof MulterError) {
+    res.status(400).json({ success: false, error: { code: `UPLOAD_${error.code}`, message: error.message } });
+    return;
+  }
+  if (error instanceof Error && /^Formato de imagen no soportado/.test(error.message)) {
+    res.status(400).json({ success: false, error: { code: "UNSUPPORTED_IMAGE_TYPE", message: error.message } });
     return;
   }
 

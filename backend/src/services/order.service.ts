@@ -236,15 +236,17 @@ export async function getOrderEntityByNumero(numero: string, opts: { userId?: st
   return order;
 }
 
-/// Módulo 07 — pagos: confirma el cobro de una orden. Se llama **solo**
-/// desde el webhook de CyberSource (paymentEvents.service.ts), nunca desde
-/// la respuesta síncrona del cobro — esa es la regla no negociable de la
-/// skill retail-payments-integration, sección 3.
+/// Módulo 07 — pagos: confirma el cobro de una orden. Se llama desde el
+/// webhook de CyberSource (paymentEvents.service.ts) — regla no negociable
+/// de la skill retail-payments-integration, sección 3 — o, con `adminUserId`,
+/// desde `orderAdmin.service.ts` cuando servicio al cliente confirma un pago
+/// que no llegó por webhook (Módulo 08). En ese segundo caso nunca desde la
+/// respuesta síncrona del cobro del cliente.
 ///
 /// Idempotente: si la orden ya está `pagado` (p. ej. el webhook llegó dos
 /// veces con distinto eventId, o ya se procesó), no repite el descuento de
 /// stock ni reenvía correo/FEL.
-export async function markOrderAsPaid(orderId: string, transactionId: string): Promise<void> {
+export async function markOrderAsPaid(orderId: string, transactionId: string, adminUserId?: string): Promise<void> {
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
   if (!order) {
     logger.error({ orderId, transactionId }, "Webhook de pago para una orden que no existe.");
@@ -278,6 +280,20 @@ export async function markOrderAsPaid(orderId: string, transactionId: string): P
         pagoUltimoError: null,
         reservaLiberada: true,
         fechaExpiracionReserva: null,
+        pagadoEn: new Date(),
+      },
+    });
+
+    // Módulo 08: primer paso del historial operativo de la orden — el resto
+    // (en_preparacion/enviado/entregado/cancelado) lo agrega
+    // orderAdmin.service.ts al avanzar el pedido desde el panel.
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        estadoAnterior: order.estado,
+        estadoNuevo: "pagado",
+        motivo: adminUserId ? "Confirmación manual de pago" : null,
+        adminUserId: adminUserId ?? null,
       },
     });
   });
@@ -368,6 +384,10 @@ export async function releaseExpiredReservations(now: Date = new Date()): Promis
           reservaLiberada: true,
           fechaExpiracionReserva: null,
         },
+      });
+
+      await tx.orderStatusHistory.create({
+        data: { orderId: order.id, estadoAnterior: order.estado, estadoNuevo: "cancelado", motivo: "expirada_reserva" },
       });
     });
     logger.info({ orderId: order.id, numero: order.numero }, "Reserva de stock liberada por expiración");

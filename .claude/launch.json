@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:backend"],
       "port": 8080
+    },
+    {
+      "name": "frontend-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:preview", "--workspace=frontend"],
+      "port": 3100
     }
   ]
 }

@@ -106,4 +106,10 @@ export const env = {
   brevoApiKey: process.env.BREVO_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "no-responder@eltesoro.gt",
   emailFromName: process.env.EMAIL_FROM_NAME ?? "Almacén El Tesoro",
+
+  // Módulo 08 — Panel admin: mismo bucket que usa el importador de Excel
+  // (scripts/import-catalog.ts) para las fotos de producto — un solo lugar
+  // de almacenamiento sin importar si la foto entró por importación o por
+  // el panel.
+  productImagesBucket: process.env.PRODUCT_IMAGES_BUCKET ?? "eltesoro-product-images-staging",
 };

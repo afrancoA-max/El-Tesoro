@@ -5,8 +5,10 @@ import { prisma } from "../../src/config/prisma";
 // orden de dependencias, y no falla si una tabla ya está vacía.
 const TABLES = [
   "payment_events",
+  "order_status_history",
   "order_items",
   "orders",
+  "inventory_adjustments",
   "order_counters",
   "shipping_rates",
   "settings",

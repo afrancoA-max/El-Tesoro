@@ -14,8 +14,11 @@ import { bannersRouter } from "./public/banners.routes";
 import { checkoutRouter } from "./public/checkout.routes";
 import { ordersRouter } from "./public/orders.routes";
 import { paymentsRouter } from "./public/payments.routes";
+import { adminRouter } from "./admin";
 
 export const apiRouter = Router();
+
+apiRouter.use("/admin", adminRouter);
 
 apiRouter.use("/categories", categoriesRouter);
 apiRouter.use("/products", productsRouter);

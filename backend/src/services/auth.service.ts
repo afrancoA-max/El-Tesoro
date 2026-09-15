@@ -111,6 +111,13 @@ export async function login(input: { email: string; password: string }): Promise
     throw AppError.unauthorized("INVALID_CREDENTIALS", "Correo o contraseña incorrectos.");
   }
 
+  // Módulo 08: cuenta interna desactivada desde "Mantenimiento de usuarios"
+  // — mismo mensaje genérico que credenciales inválidas (no revelar que el
+  // correo existe pero está desactivado).
+  if (!user.activo) {
+    throw AppError.unauthorized("INVALID_CREDENTIALS", "Correo o contraseña incorrectos.");
+  }
+
   const tokens = await issueTokens(user);
   return { user: toPublicUser(user), tokens };
 }
@@ -123,6 +130,15 @@ export async function refreshSession(rawRefreshToken: string): Promise<{ user: P
   const stored = await prisma.refreshToken.findUnique({ where: { tokenHash }, include: { user: true } });
 
   if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    throw AppError.unauthorized("INVALID_REFRESH_TOKEN", "La sesión expiró. Inicia sesión de nuevo.");
+  }
+
+  // Módulo 08: si desactivaron esta cuenta interna después de emitido el
+  // refresh token, cortarle la renovación aquí — el access token viejo (máx.
+  // 15 min, ver JWT_ACCESS_TTL_MINUTES) sigue funcionando hasta expirar,
+  // mismo costo aceptado que el resto del esquema stateless de acceso.
+  if (!stored.user.activo) {
+    await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
     throw AppError.unauthorized("INVALID_REFRESH_TOKEN", "La sesión expiró. Inicia sesión de nuevo.");
   }
 

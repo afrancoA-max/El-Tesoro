@@ -72,6 +72,20 @@ export async function sendOrderConfirmationEmail(to: string, nombre: string, num
   );
 }
 
+/// Módulo 08 — panel admin: correo al cliente cuando el pedido pasa a
+/// `enviado` desde el panel, con el número de guía del transportista (ver
+/// orderAdmin.service.ts `advanceOrderStatus`).
+export async function sendOrderShippedEmail(to: string, nombre: string, numeroOrden: string, guiaEnvio: string): Promise<void> {
+  await sendEmail(
+    to,
+    `Tu pedido ${numeroOrden} va en camino — Almacén El Tesoro`,
+    `<p>Hola ${escapeHtml(nombre)},</p>
+     <p>Tu pedido <strong>${escapeHtml(numeroOrden)}</strong> ya fue despachado.</p>
+     <p>Número de guía: <strong>${escapeHtml(guiaEnvio)}</strong></p>
+     <p>Puedes ver el detalle en "Mis pedidos" dentro de tu cuenta.</p>`,
+  );
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => {
     switch (char) {

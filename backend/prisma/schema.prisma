@@ -145,6 +145,8 @@ model ProductVariant {
   cartItems  CartItem[]
   orderItems OrderItem[]
 
+  inventoryAdjustments InventoryAdjustment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -286,9 +288,18 @@ enum Role {
   customer
   admin
   /// SEG-04: personal de tienda (consulta de precio/stock en
-  /// /staff/inventario). Menos privilegios que admin; el Módulo 08 le
-  /// agregará su propio panel sin volverlo admin.
+  /// /staff/inventario). Módulo 08: además de esa consulta, "staff" es el
+  /// rol "Gerente" del panel admin — visibilidad amplia de solo lectura
+  /// (catálogo, inventario, reportes, configuración) sin acciones sensibles
+  /// (precios, pedidos, usuarios). Menos privilegios que admin.
   staff
+  /// Módulo 08: personal de bodega/despacho — avanza pedidos (empaque,
+  /// envío) y ajusta inventario, sin ver reportes ni catálogo.
+  operador
+  /// Módulo 08: personal de atención al cliente — además de lo que puede
+  /// `operador`, confirma manualmente un pago que no llegó por webhook
+  /// (ver orderAdmin.service.ts).
+  servicio_cliente
   wholesale
 }
 
@@ -303,6 +314,14 @@ model User {
   nit             String?
   role            Role      @default(customer)
   emailVerifiedAt DateTime?
+  /// Módulo 08: "desactivar" un usuario interno (admin/staff/operador/
+  /// servicio_cliente) sin borrar su historial de auditoría (los FK de
+  /// InventoryAdjustment/OrderStatusHistory a este usuario son onDelete:
+  /// Restrict/SetNull, nunca Cascade — desactivar preserva esas filas,
+  /// borrar las habría perdido). Un cliente (`customer`) nunca se desactiva
+  /// desde aquí; esta bandera es del panel admin, no de moderación de
+  /// cuentas de cliente.
+  activo          Boolean   @default(true)
 
   addresses               Address[]
   emailVerificationTokens EmailVerificationToken[]
@@ -310,6 +329,12 @@ model User {
   refreshTokens           RefreshToken[]
   cart                    Cart?
   orders                  Order[]
+
+  /// Módulo 08: acciones administrativas hechas por este usuario (si tiene
+  /// rol admin/staff/operador/servicio_cliente) — historial de auditoría,
+  /// nunca al revés (un customer nunca tiene filas aquí).
+  inventoryAdjustments InventoryAdjustment[]
+  orderStatusChanges   OrderStatusHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -548,6 +573,17 @@ model Order {
   /// order.service.ts.
   motivoCancelacion String?
 
+  /// Módulo 08: momento exacto en que la orden pasó a `pagado` (webhook de
+  /// CyberSource o confirmación manual de servicio al cliente) — necesario
+  /// para que los reportes de ventas por rango de fechas cuadren contra el
+  /// momento real del pago, no contra `createdAt` (una orden puede crearse
+  /// un día y pagarse otro). Null mientras siga `pendiente_pago`.
+  pagadoEn DateTime?
+
+  /// Módulo 08: número de guía del transportista, capturado por el panel al
+  /// avanzar la orden a `enviado` — viaja en el correo de envío al cliente.
+  guiaEnvio String?
+
   /// Datos de facturación FEL (NIT o "CF" + nombre/razón social) — viajan
   /// con la orden; la emisión de la factura es del Módulo 07.
   facturacionNit    String
@@ -606,6 +642,8 @@ model Order {
   paymentEvents PaymentEvent[]
 
   items OrderItem[]
+
+  statusHistory OrderStatusHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -672,6 +710,68 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_items")
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 08 — Panel de administración. Trazabilidad de las dos acciones que
+// el plan exige poder auditar ("quién/cuándo/motivo"): ajustes manuales de
+// stock y cambios de estado de un pedido. No hay un AuditLog genérico
+// (edición de catálogo, por ejemplo) porque el plan no lo pide — solo estos
+// dos flujos, ver docs/plan/08-panel-administracion.md sección 5.
+// ---------------------------------------------------------------------------
+
+enum InventoryAdjustmentReason {
+  recepcion
+  merma
+  correccion
+}
+
+/// Un ajuste manual de stock desde el panel admin. `delta` es el cambio
+/// aplicado (positivo o negativo); `cantidadResultante` es el
+/// `cantidadDisponible` de la variante después de aplicarlo — se guarda ya
+/// resuelto para no tener que reconstruir el historial sumando deltas.
+model InventoryAdjustment {
+  id String @id @default(uuid())
+
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  delta              Int
+  motivo             InventoryAdjustmentReason
+  notas              String?
+  cantidadResultante Int
+
+  adminUserId String
+  adminUser   User   @relation(fields: [adminUserId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([variantId])
+  @@map("inventory_adjustments")
+}
+
+/// Un paso en el ciclo de vida operativo de un pedido, avanzado desde el
+/// panel admin (`pagado → en_preparacion → enviado → entregado`, o
+/// cancelación). `estadoAnterior` es null en la fila que registra la
+/// confirmación manual de pago (no hubo "estado anterior" relevante que
+/// auditar, solo el hecho de quién la confirmó).
+model OrderStatusHistory {
+  id String @id @default(uuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  estadoAnterior OrderStatus?
+  estadoNuevo    OrderStatus
+  motivo         String?
+
+  adminUserId String?
+  adminUser   User?   @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_status_history")
 }
 
 model Banner {
