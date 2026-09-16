@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode } from "react";
+import { ADMIN_PANEL_ROLES } from "@el-tesoro/shared";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui";
 import styles from "./AccountShell.module.css";
@@ -37,6 +38,14 @@ export function AccountShell({ title, children }: { title: string; children: Rea
               {item.label}
             </Link>
           ))}
+          {/* Módulo 08: única entrada visible al panel admin — antes solo se
+              llegaba escribiendo /admin a mano, sin ningún enlace en el
+              sitio (confirmado por el usuario probando en staging). */}
+          {user && ADMIN_PANEL_ROLES.includes(user.role) && (
+            <Link href="/admin" className={styles.navLink}>
+              Panel admin
+            </Link>
+          )}
         </nav>
         <Button variant="outline" size="sm" onClick={handleLogout} className={styles.logoutButton}>
           Cerrar sesión
