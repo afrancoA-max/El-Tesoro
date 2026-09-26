@@ -68,7 +68,7 @@ No hay `app.set("trust proxy")` y todas las llamadas del navegador pasan por el 
 `/staff/inventory` exige `requireRole("admin")` y `create-staff-user.ts` crea admins. Para darle la app de consulta de precio y stock al personal de tienda, tendrías que hacerlos admin, y en el Módulo 08 ese rol tendrá el panel completo (editar precios, pedidos).
 *Corrección:* agregar ahora el rol `staff` al enum (una migración pequeña); la ruta acepta `admin` o `staff`; el script crea `staff` por defecto y admin solo con `--role=admin`.
 
-**SEG-05 [MEDIO] CORS abierto a cualquier origen con credenciales.**
+**SEG-05 [MEDIO] CORS abierto a cualquier origen con credenciales. ✅ RESUELTO (2026-09-26, migración a diginet-eltesoro-stg)**
 `deploy-staging.yml:97` usa `CORS_ORIGINS=*` y `app.ts:20` refleja cualquier origin con `credentials: true`. Hoy lo mitiga `SameSite=Lax`, pero es la configuración que hay que eliminar. Nota: el autocompletado del buscador llama directo al backend (`NEXT_PUBLIC_API_URL`), así que hay que permitir esa origin o pasar la llamada por `/api`.
 *Corrección:* `CORS_ORIGINS` = URL exacta del frontend, también en staging.
 
@@ -195,26 +195,26 @@ El home arma los banners automáticamente con fotos de productos (`app/page.tsx`
 
 ## 5. Infraestructura, CI y repositorio
 
-**INF-01 [ALTO] El desarrollo local trabaja sobre la base de STAGING.**
+**INF-01 [ALTO] El desarrollo local trabaja sobre la base de STAGING. ✅ RESUELTO (2026-09-26, migración a diginet-eltesoro-stg)**
 `backend/.env` apunta al Cloud SQL Auth Proxy de staging. Un `prisma migrate dev` desde tu máquina puede pedir un "reset" y **borrar staging**, y las pruebas manuales ensucian los datos que ve el cliente.
 *Corrección:* el `.env` local debe apuntar a `infra/docker-compose.yml` (Postgres local, ya existe); crear un `.env.staging` aparte solo para el importador, con un aviso claro.
 
-**INF-02 [ALTO] Los servicios corren con la cuenta de despliegue.**
+**INF-02 [ALTO] Los servicios corren con la cuenta de despliegue. ✅ RESUELTO (2026-09-26, migración a diginet-eltesoro-stg)**
 `deploy-staging.yml:99` y `deploy-staging-frontend.yml:84` usan `--service-account=DEPLOYER_SA` también como identidad **de ejecución**. Si alguien compromete la app, obtiene permisos para desplegar y leer todos los secretos.
-*Corrección:* una cuenta de servicio de runtime separada, con solo Cloud SQL Client, Secret Accessor (limitado a esos secretos) y lectura de Storage. El deployer necesita `iam.serviceAccountUser` sobre ella.
+*Corrección:* una cuenta de servicio de runtime separada, con solo Cloud SQL Client, Secret Accessor (limitado a esos secretos) y lectura de Storage. El deployer necesita `iam.serviceAccountUser` sobre ella. Implementado con `eltesoro-deployer` / `eltesoro-runtime` en el proyecto nuevo; ambos servicios de Cloud Run corren con `eltesoro-runtime`.
 
-**INF-03 [MEDIO] El despliegue no espera al CI.** Un push a `main` dispara el deploy en paralelo con lint/build, así que código roto puede llegar a staging (y el backend corre las migraciones antes de construir la imagen).
+**INF-03 [MEDIO] El despliegue no espera al CI. ✅ RESUELTO (2026-09-26, migración a diginet-eltesoro-stg)** Un push a `main` dispara el deploy en paralelo con lint/build, así que código roto puede llegar a staging (y el backend corre las migraciones antes de construir la imagen).
 *Corrección:* desplegar con `workflow_run` después de que el CI termine bien, o con `needs:` dentro del mismo workflow.
 
 **INF-04 [MEDIO] No hay ninguna prueba automática.** Antes del checkout y los pagos, agregar pruebas de integración mínimas (vitest + supertest contra un Postgres de servicio en GitHub Actions): auth (registro, login, refresh, reset), carrito (agregar, límite de stock, fusión, IDOR) y direcciones (IDOR). Que corran en el CI.
 
 **INF-05 [MEDIO] El remitente de los correos es tu Gmail personal.** `deploy-staging.yml:27` → `EMAIL_FROM: afranco.sears@gmail.com`. Enviar "desde" gmail.com a través de Brevo falla la alineación DMARC (los correos llegan a spam) y expone tu correo a los clientes. Antes del 09: dominio propio verificado en Brevo (SPF/DKIM/DMARC).
 
-**INF-06 [BAJO] Costo fijo en staging.** `min-instances=1` en el frontend y el backend de staging cobra aunque nadie lo use. Poner 0 en staging (el plan lo sugería) y 1 solo en producción.
+**INF-06 [BAJO] Costo fijo en staging. ✅ RESUELTO (2026-09-26, migración a diginet-eltesoro-stg)** `min-instances=1` en el frontend y el backend de staging cobra aunque nadie lo use. Poner 0 en staging (el plan lo sugería) y 1 solo en producción. Ambos servicios (`eltesoro-api-stg`, `eltesoro-web-stg`) corren con `min-instances=0`.
 
 **INF-07 [BAJO] Falta `.gitattributes`.** Sin `* text=auto eol=lf` aparecen cambios fantasma por CRLF (hoy en `seed.ts` y dos CSS). Agregarlo y normalizar una sola vez.
 
-**INF-08 [BAJO] Valores fijos en `next.config.ts`.** `remotePatterns` apunta solo al bucket de **staging** (en producción las imágenes no cargarían) y `allowedDevOrigins` tiene una IP fija. Leer ambos de variables de entorno. Además, el comentario sobre `API_ORIGIN`/rewrite en `deploy-staging-frontend.yml` quedó obsoleto (ya no se usa rewrite).
+**INF-08 [BAJO] Valores fijos en `next.config.ts`. ✅ RESUELTO (2026-09-26, migración a diginet-eltesoro-stg)** `remotePatterns` apunta solo al bucket de **staging** (en producción las imágenes no cargarían) y `allowedDevOrigins` tiene una IP fija. Leer ambos de variables de entorno. Además, el comentario sobre `API_ORIGIN`/rewrite en `deploy-staging-frontend.yml` quedó obsoleto (ya no se usa rewrite). `PRODUCT_IMAGES_BUCKET` y `DEV_ALLOWED_ORIGINS` ya se leen de variables de entorno; además se corrigió un bug real detectado en esta migración — `PRODUCT_IMAGES_BUCKET` debe pasarse como build ARG del Dockerfile (Next.js congela `images.remotePatterns` en el build standalone, no se relee al arrancar).
 
 **INF-09 [BAJO] Páginas internas públicas.** `/dev/design` y `/staff/inventario` son accesibles e indexables. Bloquear `/dev/design` en producción (`notFound()` salvo que se active con un flag); agregar `/staff`, `/favoritos` y `/api` a `robots.ts`, y `noindex` en un layout de `/staff`.
 
