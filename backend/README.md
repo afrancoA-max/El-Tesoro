@@ -49,14 +49,21 @@ Filas rechazadas y advertencias quedan en `backend/scripts/import-rechazadas.jso
 
 ## Infraestructura GCP (staging)
 
+Migrado el 2026-09-26 del proyecto de prueba `project-26c70338-0265-4c7e-837`
+(instancia de prueba gratuita Enterprise Plus a punto de vencer, sin backups)
+a un proyecto dedicado — ver `docs/revision/migracion-gcp-staging.md`.
+
 | Recurso | Nombre |
 |---|---|
-| Proyecto | `project-26c70338-0265-4c7e-837` |
-| Cloud SQL (PostgreSQL) | `proyectoalmaceneltesoro` (instancia de prueba gratuita de Enterprise Plus — revisar fecha de expiración del trial antes del Módulo 09) |
+| Proyecto | `diginet-eltesoro-stg` |
+| Cloud SQL (PostgreSQL 18) | `eltesoro-db-stg` (Enterprise, db-f1-micro, backups diarios) |
 | Base de datos de staging | `eltesoro_staging` |
-| Bucket de imágenes | `gs://eltesoro-product-images-staging` (lectura pública) |
-| Artifact Registry | `eltesoro-backend` (us-central1) |
-| Cloud Run (staging) | `eltesoro-backend-staging` |
-| Cuenta de servicio de despliegue | `eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com` |
+| Usuario de la app | `eltesoro_app` |
+| Bucket de imágenes | `gs://diginet-eltesoro-stg-media` (lectura pública) |
+| Artifact Registry | `eltesoro` (us-central1) |
+| Cloud Run backend (staging) | `eltesoro-api-stg` |
+| Cloud Run frontend (staging) | `eltesoro-web-stg` |
+| Cuenta de servicio de despliegue | `eltesoro-deployer@diginet-eltesoro-stg.iam.gserviceaccount.com` |
+| Cuenta de servicio de ejecución | `eltesoro-runtime@diginet-eltesoro-stg.iam.gserviceaccount.com` |
 
 El despliegue a staging es automático: un push a `main` que toque `backend/`, `shared/` o el propio workflow dispara `.github/workflows/deploy-staging.yml`, que aplica migraciones de Prisma contra Cloud SQL y despliega a Cloud Run vía Workload Identity Federation (sin llaves JSON — bloqueadas por política de organización del proyecto).

@@ -12,30 +12,27 @@ on:
   workflow_dispatch: {}
 
 env:
-  PROJECT_ID: project-26c70338-0265-4c7e-837
+  # OPS-00: migrado el 2026-09-26 al proyecto dedicado diginet-eltesoro-stg
+  # (ver docs/revision/migracion-gcp-staging.md).
+  PROJECT_ID: diginet-eltesoro-stg
   REGION: us-central1
-  SERVICE: eltesoro-frontend-staging
-  # Reutiliza el repositorio de Artifact Registry ya creado para el backend
-  # (módulo 02): el deployer SA solo tiene permiso de escritura ahí, no de
-  # crear repositorios nuevos ("PERMISSION_DENIED" al intentar crear
-  # "eltesoro-frontend" — ver corrida fallida del 2026-08-29). Un repositorio
-  # Docker puede alojar imágenes de distintos servicios sin conflicto.
-  REPOSITORY: eltesoro-backend
-  API_URL: https://eltesoro-backend-staging-472679541597.us-central1.run.app/api
+  SERVICE: eltesoro-web-stg
+  REPOSITORY: eltesoro
+  API_URL: https://eltesoro-api-stg-679837745364.us-central1.run.app/api
   # Sin el sufijo /api (a diferencia de API_URL): el proxy same-origin
   # (frontend/src/app/api/[...path]/route.ts, no un rewrite de Next) le
   # agrega /api/<path> al armar el destino de cada request.
-  API_ORIGIN: https://eltesoro-backend-staging-472679541597.us-central1.run.app
-  SITE_URL: https://eltesoro-frontend-staging-472679541597.us-central1.run.app
+  API_ORIGIN: https://eltesoro-api-stg-679837745364.us-central1.run.app
+  SITE_URL: https://eltesoro-web-stg-679837745364.us-central1.run.app
   # INF-08: next.config.ts lo lee en tiempo de arranque del servidor (no de
   # build) para armar remotePatterns de next/image — coincide con el bucket
   # real de este entorno; en producción (Módulo 09) será otro.
-  PRODUCT_IMAGES_BUCKET: eltesoro-product-images-staging
-  WORKLOAD_IDENTITY_PROVIDER: "projects/472679541597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-  DEPLOYER_SA: "eltesoro-deployer@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
+  PRODUCT_IMAGES_BUCKET: diginet-eltesoro-stg-media
+  WORKLOAD_IDENTITY_PROVIDER: "projects/679837745364/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+  DEPLOYER_SA: "eltesoro-deployer@diginet-eltesoro-stg.iam.gserviceaccount.com"
   # INF-02: identidad de EJECUCIÓN, separada del deployer — ver el mismo
   # comentario en deploy-staging.yml.
-  RUNTIME_SA: "eltesoro-runtime@project-26c70338-0265-4c7e-837.iam.gserviceaccount.com"
+  RUNTIME_SA: "eltesoro-runtime@diginet-eltesoro-stg.iam.gserviceaccount.com"
 
 permissions:
   contents: read
@@ -99,6 +96,7 @@ jobs:
           docker build -f frontend/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL="${{ env.API_URL }}" \
             --build-arg NEXT_PUBLIC_SITE_URL="${{ env.SITE_URL }}" \
+            --build-arg PRODUCT_IMAGES_BUCKET="${{ env.PRODUCT_IMAGES_BUCKET }}" \
             -t "$IMAGE" .
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
