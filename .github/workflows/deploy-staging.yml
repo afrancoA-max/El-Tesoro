@@ -1,5 +1,8 @@
 name: Deploy backend a staging
 
+# Reintento 2026-09-26: primer deploy falló porque eltesoro-deployer no
+# tenía roles/cloudsql.client (ya corregido en GCP) — este comentario solo
+# toca el workflow para volver a disparar el pipeline.
 on:
   push:
     branches: [main]
