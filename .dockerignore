@@ -3,7 +3,6 @@ node_modules
 **/dist
 **/.next
 .git
-frontend
 docs
 plan-modular
 retail-*

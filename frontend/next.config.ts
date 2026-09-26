@@ -2,7 +2,10 @@ import type { NextConfig } from "next";
 
 // INF-08: el bucket de imágenes y la IP de desarrollo cambian por entorno
 // (staging hoy, producción en el Módulo 09; la IP local, por máquina) —
-// nunca deben quedar fijos en el código versionado.
+// nunca deben quedar fijos en el código versionado. PRODUCT_IMAGES_BUCKET
+// debe llegar como build ARG del Dockerfile (no solo env var de Cloud Run):
+// `images.remotePatterns` queda fijo en el build standalone de Next.js, no
+// se relee al arrancar el servidor.
 const PRODUCT_IMAGES_BUCKET = process.env.PRODUCT_IMAGES_BUCKET ?? "eltesoro-product-images-staging";
 const DEV_ORIGINS = (process.env.DEV_ALLOWED_ORIGINS ?? "192.168.0.154")
   .split(",")
